@@ -9,6 +9,7 @@ import (
 
 	// Import your CLI subcommands
 	// "github.com/redjax/syst/internal/commands"
+	"github.com/redjax/syst/internal/commands/showCommand"
 
 	// Import your CLI config
 	// "github.com/redjax/syst/internal/config"
@@ -57,6 +58,7 @@ func init() {
 
 	// Add other CLI subcommands
 	// rootCmd.AddCommand(commands.HelloCmd())
+	rootCmd.AddCommand(showCommand.NewShowCmd())
 
 	// Call the initConfig function when the root command is initialized
 	cobra.OnInitialize(initConfig)
