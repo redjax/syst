@@ -17,6 +17,7 @@ type PlatformInfo struct {
 	Arch string
 	// e.g. "10", "24.04", "12", "Sonoma"
 	OSRelease    string
+	CurrentUser  PlatformUser
 	DefaultShell string
 	UserHomeDir  string
 	Uptime       time.Duration
@@ -30,6 +31,14 @@ type PlatformInfo struct {
 	CPUSockets int
 	CPUModel   string
 	CPUVendor  string
+}
+
+type PlatformUser struct {
+	Username string
+	Uid      string
+	Gid      string
+	Name     string
+	HomeDir  string
 }
 
 // GatherPlatformInfo collects platform information in a cross-platform way.
@@ -61,6 +70,18 @@ func GatherPlatformInfo() (*PlatformInfo, error) {
 
 	// Get total RAM (platform-specific)
 	pi.TotalRAM = detectTotalRAM()
+
+	// Get user home directory and user info
+	if u, err := user.Current(); err == nil {
+		pi.UserHomeDir = u.HomeDir
+		pi.CurrentUser = PlatformUser{
+			Username: u.Username,
+			Uid:      u.Uid,
+			Gid:      u.Gid,
+			Name:     u.Name,
+			HomeDir:  u.HomeDir,
+		}
+	}
 
 	return pi, nil
 }
