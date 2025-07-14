@@ -34,7 +34,7 @@ Param(
     [Parameter(Mandatory = $false, HelpMessage = "The build artifact path, where build outputs will be saved.")]
     $BuildOutputDir = "dist/",
     [Parameter(Mandatory = $false, HelpMessage = "The name of the file to build (the entrypoint for your app).")]
-    $BuildTarget = "./cmd/cli/main.go"
+    $BuildTarget = "./cmd/entrypoint/main.go"
 )
 
 Write-Debug "BinName: $BinName"

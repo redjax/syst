@@ -7,7 +7,7 @@ BinName="syst"
 BuildOS="linux"
 BuildArch="amd64"
 BuildOutputDir="dist/"
-BuildTarget="./main.go"
+BuildTarget="./cmd/entrypoint/main.go"
 
 function print_help {
   echo "-- | Build Go module | --"
