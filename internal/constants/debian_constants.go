@@ -1,11 +1,10 @@
-// internal/constants/debian_constants.go
 //go:build linux
 // +build linux
 
 package constants
 
-func debianConstants(release string) LinuxConstants {
-	return LinuxConstants{
+func debianConstants(release string) PlatformConstants {
+	return PlatformConstants{
 		Family:         "Debian",
 		Distribution:   "Debian",
 		Release:        release,
