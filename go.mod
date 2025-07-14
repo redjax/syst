@@ -3,6 +3,7 @@ module github.com/redjax/syst
 go 1.24.4
 
 require (
+	github.com/klauspost/cpuid/v2 v2.2.11
 	github.com/knadh/koanf/parsers/dotenv v1.1.0
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/parsers/toml v0.1.0
