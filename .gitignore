@@ -1,0 +1,6 @@
+## Go build output dirs
+dist/
+build/
+release/
+bin/
+
