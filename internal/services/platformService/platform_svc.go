@@ -1,0 +1,80 @@
+package platformservice
+
+import (
+	"os"
+	"os/user"
+	"runtime"
+	"time"
+
+	"github.com/klauspost/cpuid/v2"
+)
+
+// PlatformInfo holds information about the current host system.
+type PlatformInfo struct {
+	// e.g. "windows", "linux", "darwin"
+	OS string
+	// e.g. "amd64", "arm64"
+	Arch string
+	// e.g. "10", "24.04", "12", "Sonoma"
+	OSRelease    string
+	DefaultShell string
+	UserHomeDir  string
+	Uptime       time.Duration
+	// bytes
+	TotalRAM uint64
+	// physical cores
+	CPUCores int
+	// logical cores (threads)
+	CPUThreads int
+	// set to 1 by default; see note below
+	CPUSockets int
+	CPUModel   string
+	CPUVendor  string
+}
+
+// GatherPlatformInfo collects platform information in a cross-platform way.
+func GatherPlatformInfo() (*PlatformInfo, error) {
+	pi := &PlatformInfo{
+		OS:         runtime.GOOS,
+		Arch:       runtime.GOARCH,
+		CPUCores:   cpuid.CPU.PhysicalCores,
+		CPUThreads: cpuid.CPU.LogicalCores,
+		// Most systems are single-socket; platform-specific detection needed for more
+		CPUSockets: 1,
+		CPUModel:   cpuid.CPU.BrandName,
+		CPUVendor:  cpuid.CPU.VendorString,
+	}
+
+	// Get user home directory
+	if u, err := user.Current(); err == nil {
+		pi.UserHomeDir = u.HomeDir
+	}
+
+	// Get default shell (best effort, platform-specific)
+	pi.DefaultShell = detectDefaultShell()
+
+	// Get OS release/version (platform-specific)
+	pi.OSRelease = detectOSRelease()
+
+	// Get uptime (platform-specific)
+	pi.Uptime = detectUptime()
+
+	// Get total RAM (platform-specific)
+	pi.TotalRAM = detectTotalRAM()
+
+	return pi, nil
+}
+
+// detectDefaultShell tries to find the user's default shell.
+func detectDefaultShell() string {
+	switch runtime.GOOS {
+	case "windows":
+		return os.Getenv("ComSpec") // Usually "C:\\Windows\\System32\\cmd.exe"
+	default:
+		shell := os.Getenv("SHELL")
+		if shell != "" {
+			return shell
+		}
+		return "/bin/sh"
+	}
+}
