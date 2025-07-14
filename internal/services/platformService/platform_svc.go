@@ -1,6 +1,7 @@
 package platformservice
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"runtime"
@@ -39,6 +40,41 @@ type PlatformUser struct {
 	Gid      string
 	Name     string
 	HomeDir  string
+}
+
+// Add a printstring method to the PlatformInfo class.
+// Controls how the class displays when printed directly. Like Python's __repr__.
+func (p PlatformInfo) String() string {
+	return fmt.Sprintf(
+		`Platform Information:
+  OS:            %s
+  Architecture:  %s
+  OS Release:    %s
+  User:          %s (%s)
+  Default Shell: %s
+  Home Dir:      %s
+  Uptime:        %s
+  Total RAM:     %.2f GB
+  CPU Cores:     %d
+  CPU Threads:   %d
+  CPU Sockets:   %d
+  CPU Model:     %s
+  CPU Vendor:    %s`,
+		p.OS,
+		p.Arch,
+		p.OSRelease,
+		p.CurrentUser.Name,
+		p.CurrentUser.Username,
+		p.DefaultShell,
+		p.UserHomeDir,
+		p.Uptime.String(),
+		float64(p.TotalRAM)/(1024*1024*1024),
+		p.CPUCores,
+		p.CPUThreads,
+		p.CPUSockets,
+		p.CPUModel,
+		p.CPUVendor,
+	)
 }
 
 // GatherPlatformInfo collects platform information in a cross-platform way.
