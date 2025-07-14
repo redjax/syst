@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/redjax/syst/internal/constants"
+	utils "github.com/redjax/syst/internal/utils/convert"
 
 	"github.com/spf13/cobra"
 )
@@ -14,6 +15,8 @@ func NewConstantsCmd() *cobra.Command {
 		Short: "Show platform constants",
 		Run: func(cmd *cobra.Command, args []string) {
 			consts := constants.GetPlatformConstants()
+			totalRam := utils.BytesToHumanReadable(consts.TotalRAM)
+
 			fmt.Printf("Uptime: %s\n", consts.Uptime)
 			fmt.Printf("Hostname: %s\n", consts.Hostname)
 			fmt.Printf("Default Shell: %s\n", consts.DefaultShell)
@@ -25,7 +28,7 @@ func NewConstantsCmd() *cobra.Command {
 			fmt.Printf("CPU Architecture: %s\n", consts.Architecture)
 			fmt.Printf("CPU Model: %s\n", consts.CPUModel)
 			fmt.Printf("CPU Count: %d\n", consts.CPUCount)
-			fmt.Printf("TotalRAM (bytes): %d\n", consts.TotalRAM)
+			fmt.Printf("TotalRAM: %s\n", totalRam)
 			fmt.Printf("Filesystem: %s\n", consts.Filesystem)
 		},
 	}
