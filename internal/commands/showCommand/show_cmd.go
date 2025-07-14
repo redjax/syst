@@ -12,6 +12,7 @@ func NewShowCmd() *cobra.Command {
 
 	// Attach subcommands
 	showCmd.AddCommand(NewPlatformCmd())
+	showCmd.AddCommand(NewConstantsCmd())
 
 	return showCmd
 }
