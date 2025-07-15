@@ -22,7 +22,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintln(cmd.ErrOrStderr(), "Checking for latest release...")
 
-	// Step 1: Fetch latest GitHub release metadata
+	// Fetch latest GitHub release metadata
 	resp, err := http.Get(apiURL)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest release: %w", err)
@@ -47,7 +47,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintln(cmd.ErrOrStderr(), "Latest version:", release.TagName)
 
-	// Step 2: Match correct release asset
+	// Match correct release asset
 	normalizedOS := normalizeOS(runtime.GOOS)
 	expectedPrefix := fmt.Sprintf("%s-%s", normalizedOS, runtime.GOARCH)
 
@@ -58,11 +58,12 @@ func UpgradeSelf(cmd *cobra.Command, args []string) error {
 			break
 		}
 	}
+
 	if assetURL == "" {
 		return fmt.Errorf("no suitable release found for %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
-	// Step 3: Download the zip file
+	// Download the release zip file
 	fmt.Fprintln(cmd.ErrOrStderr(), "Downloading:", assetURL)
 
 	resp2, err := http.Get(assetURL)
@@ -82,14 +83,15 @@ func UpgradeSelf(cmd *cobra.Command, args []string) error {
 	}
 	zipTmp.Close()
 
-	// Step 4: Extract the binary
+	// Extract the binary
 	binaryTmp, err := extractBinaryFromZip(zipTmp.Name())
 	if err != nil {
 		return fmt.Errorf("failed to extract binary: %w", err)
 	}
 	defer os.Remove(binaryTmp)
 
-	// Step 5: Copy binary to current executable’s .new file
+	// Copy binary to current executable’s .new file. On next execution, bin will detect
+	//   the .new version and replace it on-the-fly.
 	exePath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("failed to locate current executable: %w", err)
@@ -102,7 +104,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string) error {
 
 	fmt.Fprintf(cmd.ErrOrStderr(),
 		"✅ Upgrade file written to:\n  %s\n"+
-			"➡️  The upgrade will apply automatically the next time you run:\n  %s\n",
+			"  The upgrade will apply automatically the next time you run:\n  %s\n",
 		newPath,
 		filepath.Base(exePath))
 
@@ -114,6 +116,7 @@ func normalizeOS(goos string) string {
 	if goos == "darwin" {
 		return "macOS"
 	}
+
 	return goos
 }
 
@@ -129,6 +132,7 @@ func extractBinaryFromZip(zipPath string) (string, error) {
 		if f.FileInfo().IsDir() {
 			continue
 		}
+
 		rc, err := f.Open()
 		if err != nil {
 			return "", err
@@ -139,23 +143,28 @@ func extractBinaryFromZip(zipPath string) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
 		if _, err := io.Copy(tmpBin, rc); err != nil {
 			tmpBin.Close()
 			return "", err
 		}
+
 		tmpBin.Close()
 
 		if err := os.Chmod(tmpBin.Name(), 0755); err != nil {
 			return "", err
 		}
+
 		return tmpBin.Name(), nil
 	}
+
 	return "", fmt.Errorf("no binary found in zip archive")
 }
 
 // copyFile utility
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
+
 	if err != nil {
 		return err
 	}
@@ -165,11 +174,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
+
 	defer out.Close()
 
 	if _, err := io.Copy(out, in); err != nil {
 		return err
 	}
+
 	return out.Chmod(0755)
 }
 
@@ -179,7 +190,9 @@ func TrySelfUpgrade() {
 	if err != nil {
 		return
 	}
+
 	newPath := exePath + ".new"
+
 	if _, err := os.Stat(newPath); err == nil {
 		// New file exists: perform replacement
 		if err := os.Rename(newPath, exePath); err == nil {
