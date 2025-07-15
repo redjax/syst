@@ -15,8 +15,11 @@ import (
 // NewZipbakCommand returns the zipbak parent command, with subcommands attached.
 func NewZipbakCommand() *cobra.Command {
 	var (
-		cfgFile      string
-		k            = koanf.New(".")
+		// Path to a configuration file for zipbak command
+		cfgFile string
+		// Init Koanf conf object
+		k = koanf.New(".")
+		// BackupConfig type placeholder
 		backupConfig config.BackupConfig
 	)
 
@@ -33,7 +36,8 @@ func NewZipbakCommand() *cobra.Command {
 			}
 			// Load from env as fallback
 			k.Load(env.Provider("ZIPBAK_", ".", func(s string) string { return s }), nil)
-			// Unmarshal into struct
+
+			// Unmarshal config into struct
 			return k.Unmarshal("", &backupConfig)
 		},
 	}
@@ -44,7 +48,6 @@ func NewZipbakCommand() *cobra.Command {
 
 	// Add subcommands, passing config
 	zipbakCmd.AddCommand(commands.BackupCmd(&backupConfig, k))
-	// If you have more subcommands, add them here
 
 	return zipbakCmd
 }

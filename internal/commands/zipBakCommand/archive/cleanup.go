@@ -16,6 +16,7 @@ type fileInfo struct {
 // CleanupBackups deletes the oldest zip files in `dir`, keeping only the most recent `keep`.
 // It ensures the current backup (excludePath) is never deleted.
 func CleanupBackups(dir string, keep int, dryRun bool, excludePath string) error {
+	// Find all .zip files in path
 	matches, err := filepath.Glob(filepath.Join(dir, "*.zip"))
 	if err != nil {
 		return err
@@ -23,13 +24,17 @@ func CleanupBackups(dir string, keep int, dryRun bool, excludePath string) error
 
 	var allFiles []fileInfo
 	for _, path := range matches {
+		// Get info about path
 		fi, err := os.Stat(path)
 		if err != nil {
 			continue
 		}
+
+		// Append to allFiles array
 		allFiles = append(allFiles, fileInfo{path: path, modTime: fi.ModTime().Unix()})
 	}
 
+	// Check if there are more values than given --keep value
 	if len(allFiles) <= keep {
 		fmt.Printf("No cleanup needed. There are %d backup file(s), and the keep threshold is %d.\n", len(allFiles), keep)
 		return nil
@@ -60,12 +65,15 @@ func CleanupBackups(dir string, keep int, dryRun bool, excludePath string) error
 		fmt.Printf("  %s\n", fi.path)
 	}
 
+	// Remove files
 	fmt.Println("Will delete:")
 	for _, fi := range allFiles {
 		if _, keep := keepSet[fi.path]; keep {
 			continue
 		}
+
 		fmt.Printf("  %s\n", fi.path)
+
 		if dryRun {
 			fmt.Printf("[DRY RUN] Would delete old backup: %s\n", fi.path)
 		} else {
