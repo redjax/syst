@@ -67,6 +67,7 @@ func init() {
 	rootCmd.AddCommand(zipBak.NewZipbakCommand())
 	rootCmd.AddCommand(scanPath.NewScanPathCommand())
 
+	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		// Handle -v/--version
 		v, _ := cmd.Flags().GetBool("version")
