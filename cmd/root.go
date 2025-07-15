@@ -10,7 +10,7 @@ import (
 	// Import your CLI subcommands
 	// "github.com/redjax/syst/internal/commands"
 	"github.com/redjax/syst/internal/commands/showCommand"
-	"github.com/redjax/syst/internal/commands/zipBak"
+	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
 
 	// Import your CLI config
 	// "github.com/redjax/syst/internal/config"
