@@ -9,6 +9,7 @@ import (
 
 	// Import your CLI subcommands
 	// "github.com/redjax/syst/internal/commands"
+	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
 
@@ -61,6 +62,7 @@ func init() {
 	// rootCmd.AddCommand(commands.HelloCmd())
 	rootCmd.AddCommand(showCommand.NewShowCmd())
 	rootCmd.AddCommand(zipBak.NewZipbakCommand())
+	rootCmd.AddCommand(scanPath.NewScanPathCommand())
 
 	// Call the initConfig function when the root command is initialized
 	cobra.OnInitialize(initConfig)
