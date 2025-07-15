@@ -8,6 +8,7 @@ import (
 	"github.com/redjax/syst/internal/services/pathScanService/tbl"
 )
 
+// ScanDirectory scans a path with options and returns a list of files
 func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterString string) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
@@ -16,6 +17,7 @@ func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterS
 
 	var results [][]string
 	count := 0
+
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if err != nil {
@@ -35,7 +37,9 @@ func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterS
 			owner,
 			info.Mode().String(),
 		}
+
 		results = append(results, row)
+
 		count++
 		if limit > 0 && count >= limit {
 			break
@@ -43,6 +47,7 @@ func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterS
 	}
 
 	var filterExpr *tbl.FilterExpr
+
 	if filterString != "" {
 		filterExpr, err = tbl.ParseFilter(filterString)
 		if err != nil {
@@ -51,6 +56,7 @@ func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterS
 	}
 
 	results = tbl.ApplyFilter(results, filterExpr)
+
 	tbl.SortResults(results, sortColumn, sortOrder)
 	tbl.PrintScanResultsTable(results)
 
