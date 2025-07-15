@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// BytesToHumanReadable converts bytes number to human-readable string.
 func BytesToHumanReadable(bytes uint64) string {
 	const unit = 1024
 	if bytes < unit {
@@ -69,9 +70,11 @@ func ParseByteSize(s string) int64 {
 	if err != nil {
 		return 0 // or handle error as needed
 	}
+
 	mult, ok := multipliers[unitPart]
 	if !ok {
 		return 0 // or handle error as needed
 	}
+
 	return int64(val * float64(mult))
 }
