@@ -2,6 +2,8 @@ package strutilcommand
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/redjax/syst/internal/utils/strutils"
 	"github.com/spf13/cobra"
@@ -30,18 +32,36 @@ Examples:
   strutil "Hello World" --remove "ll" --replace "World/Earth"
   strutil "hello world" --title
 `,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			target := args[0]
-			result := target
-
-			// If --search is set, do the grep-like check first
-			if searchString != "" {
-				found := strutils.SearchSubstring(result, searchString, ignoreCase)
-				if !found {
-					// Silent success, like grep (but you could change behavior)
-					return nil
+			var input string
+			if len(args) > 0 {
+				input = args[0]
+			} else {
+				// Read from stdin (will read until EOF)
+				inBytes, err := io.ReadAll(cmd.InOrStdin())
+				if err != nil {
+					return err
 				}
+
+				input = strings.TrimRight(string(inBytes), "\n")
+			}
+
+			result := input
+
+			// Only do search if the --search flag is used
+			if searchString != "" {
+				matches := strutils.FindMatchingLines(input, searchString, ignoreCase)
+
+				if len(matches) == 0 {
+					fmt.Fprintf(cmd.OutOrStdout(), "No results for '%s'\n", searchString)
+				} else {
+					for _, line := range matches {
+						fmt.Fprintln(cmd.OutOrStdout(), line)
+					}
+				}
+
+				return nil
 			}
 
 			// Apply removals using utility function

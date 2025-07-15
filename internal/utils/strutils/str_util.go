@@ -83,12 +83,32 @@ func ReplaceSubstrings(s string, replaceList []string, ignoreCase bool) (string,
 	return s, warnings
 }
 
-// SearchSubstring returns true if substr is found in s, with optional case-insensitivity.
+// SearchSubstring returns true if substr is in s (with optional case-insensitivity).
 func SearchSubstring(s, substr string, ignoreCase bool) bool {
 	if ignoreCase {
 		s = strings.ToLower(s)
 		substr = strings.ToLower(substr)
 	}
-
 	return strings.Contains(s, substr)
+}
+
+// FindMatchingLines returns lines containing substr (grep-like)
+func FindMatchingLines(s, substr string, ignoreCase bool) []string {
+	lines := strings.Split(s, "\n")
+
+	var matches []string
+
+	for _, line := range lines {
+		if ignoreCase {
+			if strings.Contains(strings.ToLower(line), strings.ToLower(substr)) {
+				matches = append(matches, line)
+			}
+		} else {
+			if strings.Contains(line, substr) {
+				matches = append(matches, line)
+			}
+		}
+	}
+
+	return matches
 }
