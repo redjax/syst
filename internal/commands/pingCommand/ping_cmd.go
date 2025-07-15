@@ -45,7 +45,7 @@ Supports flags like count, delay between pings, and file-based logging.`,
 				Stats:     stats,
 			}
 
-			err := pingService.RunPing(opts)
+			err := pingService.RunPing(&opts)
 			if err != nil {
 				return err
 			}
@@ -60,7 +60,8 @@ Supports flags like count, delay between pings, and file-based logging.`,
 
 			// Print log file below summary
 			if opts.LogToFile && opts.LogFilePath != "" {
-				fmt.Printf("Log file saved to: %s\n", opts.LogFilePath)
+				fmt.Printf("Log file saved to:\n %s\n", opts.LogFilePath)
+				fmt.Printf("-------------\n")
 			}
 
 			return nil

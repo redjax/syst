@@ -29,7 +29,7 @@ type PingStats struct {
 	Total     int
 }
 
-func RunPing(opts Options) error {
+func RunPing(opts *Options) error {
 	opts.Target = strings.TrimSpace(opts.Target)
 	if opts.Target == "" {
 		return ErrEmptyTarget

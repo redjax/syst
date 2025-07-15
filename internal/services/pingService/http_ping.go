@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func defaultHTTPPing(opts Options) error {
+func defaultHTTPPing(opts *Options) error {
 	url := opts.Target
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 		url = "http://" + url

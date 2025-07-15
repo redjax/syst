@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func runICMPPing(opts Options) error {
+func runICMPPing(opts *Options) error {
 	if opts.LogToFile && opts.Logger != nil {
 		opts.Logger.Printf("[INFO] Starting ICMP ping to %s", opts.Target)
 	}
@@ -61,6 +61,6 @@ func runICMPPing(opts Options) error {
 	return nil
 }
 
-func runHTTPPing(opts Options) error {
+func runHTTPPing(opts *Options) error {
 	return defaultHTTPPing(opts)
 }
