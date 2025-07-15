@@ -12,6 +12,7 @@ import (
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
+	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
 	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
 	"github.com/redjax/syst/internal/version"
 
@@ -66,6 +67,7 @@ func init() {
 	rootCmd.AddCommand(zipBak.NewZipbakCommand())
 	rootCmd.AddCommand(scanPath.NewScanPathCommand())
 	rootCmd.AddCommand(pingo.NewPingCommand())
+	rootCmd.AddCommand(strutilcommand.NewStrUtilCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {

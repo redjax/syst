@@ -15,6 +15,8 @@ require (
 	github.com/knadh/koanf/v2 v2.2.2
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
+	golang.org/x/sys v0.34.0
+	golang.org/x/text v0.27.0
 )
 
 require (
@@ -30,6 +32,5 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	go.yaml.in/yaml/v3 v3.0.3 // indirect
-	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/term v0.1.0 // indirect
 )
