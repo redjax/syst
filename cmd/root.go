@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	// Import your CLI subcommands
-	// "github.com/redjax/syst/internal/commands"
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
@@ -63,7 +62,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Print version and exit")
 
 	// Add other CLI subcommands
-	// rootCmd.AddCommand(commands.HelloCmd())
 	rootCmd.AddCommand(showCommand.NewShowCmd())
 	rootCmd.AddCommand(zipBak.NewZipbakCommand())
 	rootCmd.AddCommand(scanPath.NewScanPathCommand())
