@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
+	"github.com/redjax/syst/internal/version"
 
 	// Import your CLI config
 	// "github.com/redjax/syst/internal/config"
@@ -57,12 +59,28 @@ func init() {
 	// Add flags to the CLI's root command, making them 'global'
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (JSON)")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "D", false, "Enable debug logging")
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "Print version and exit")
 
 	// Add other CLI subcommands
 	// rootCmd.AddCommand(commands.HelloCmd())
 	rootCmd.AddCommand(showCommand.NewShowCmd())
 	rootCmd.AddCommand(zipBak.NewZipbakCommand())
 	rootCmd.AddCommand(scanPath.NewScanPathCommand())
+
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		// Handle -v/--version
+		v, _ := cmd.Flags().GetBool("version")
+		if v {
+			fmt.Printf("syst version:%s commit:%s date:%s\n", version.Version, version.Commit, version.Date)
+			os.Exit(0)
+		}
+
+		// Handle -D/--debug
+		if d, _ := cmd.Flags().GetBool("debug"); d {
+			log.SetFlags(log.LstdFlags | log.Lshortfile)
+			log.Println("DEBUG mode enabled")
+		}
+	}
 
 	// Call the initConfig function when the root command is initialized
 	cobra.OnInitialize(initConfig)
