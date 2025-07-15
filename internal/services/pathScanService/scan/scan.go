@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/redjax/syst/internal/commands/scanPathCommand/tbl"
+	"github.com/redjax/syst/internal/services/pathScanService/tbl"
 )
 
 func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterString string) error {

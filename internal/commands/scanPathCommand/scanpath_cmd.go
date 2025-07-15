@@ -2,7 +2,7 @@
 package scanPathCommand
 
 import (
-	"github.com/redjax/syst/internal/commands/scanPathCommand/scan"
+	"github.com/redjax/syst/internal/services/pathScanService/scan"
 	"github.com/spf13/cobra"
 )
 
