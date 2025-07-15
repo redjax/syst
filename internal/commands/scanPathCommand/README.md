@@ -8,12 +8,12 @@ Run with `--help` to see help menu & args.
 
 Args:
 
-| Arg | Purpose |
-| --- | ------- |
-| `-p/--path` | The target path to scan |
-| `-l/--limit` | Limit scanned items to reduce scantime |
-| `-s/--sort` | Column to sort by (name, size, created, modified, owner, permissions) |
-| `-o/--order` | The sort order (asc/desc) |
+| Arg           | Purpose                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| `-p/--path`   | The target path to scan                                                                     |
+| `-l/--limit`  | Limit scanned items to reduce scantime                                                      |
+| `-s/--sort`   | Column to sort by (name, size, created, modified, owner, permissions)                       |
+| `-o/--order`  | The sort order (asc/desc)                                                                   |
 | `-f/--filter` | A string telling the command how to sort results (e.g. 'size <10MB', 'created >2022-01-01') |
 
 ## Examples
