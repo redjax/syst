@@ -34,14 +34,39 @@ Param(
     [Parameter(Mandatory = $false, HelpMessage = "The build artifact path, where build outputs will be saved.")]
     $BuildOutputDir = "dist/",
     [Parameter(Mandatory = $false, HelpMessage = "The name of the file to build (the entrypoint for your app).")]
-    $BuildTarget = "./cmd/entrypoint/main.go"
+    $BuildTarget = "./cmd/entrypoint",
+    [Parameter(Mandatory = $false, HelpMessage = "The name you gave the app during go mod init. Check in go.mod to see the value the app is using.")]
+    $ModulePath = "github.com/redjax/syst/internal/version"
 )
+
+## Get Git metadata
+try {
+    $GitVersion = (git describe --tags --always).Trim()
+} catch {
+    $GitVersion = "dev"
+}
+
+try {
+    $GitCommit = (git rev-parse --short HEAD).Trim()
+} catch {
+    $GitCommit = "none"
+}
+
+$BuildDate = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+
+## Set up ldflags to inject version metadata
+$LdFlags = "-s -w " +
+    "-X `"$ModulePath.Version=$GitVersion`" " +
+    "-X `"$ModulePath.Commit=$GitCommit`" " +
+    "-X `"$ModulePath.Date=$BuildDate`""
 
 Write-Debug "BinName: $BinName"
 Write-Debug "BuildOS: $BuildOS"
 Write-Debug "BuildArch: $BuildArch"
 Write-Debug "BuildOutputDir: $BuildOutputDir"
 Write-Debug "BuildTarget: $BuildTarget"
+Write-Debug "GitVersion: $GitVersion"
+Write-Debug "BuildDate: $BuildDate"
 
 if ( $null -eq $BinName ) {
     Write-Warning "No bin name provided, pass the name of your executable using the -BinName flag"
@@ -62,7 +87,7 @@ Write-Debug "Build output: $BuildOutput"
 Write-Host "Building $($BuildTarget), outputting to $($BuildOutput)" -ForegroundColor Cyan
 Write-Information "-- [ Build start"
 try {
-    go build -o $BuildOutput $BuildTarget
+    go build -ldflags "$LdFlags" -o $BuildOutput $BuildTarget
     Write-Host "Build successful" -ForegroundColor Green
 }
 catch {
