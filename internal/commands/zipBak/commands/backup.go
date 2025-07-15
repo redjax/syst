@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/redjax/syst/internal/commands/zipBak/archive"
 	"github.com/redjax/syst/internal/commands/zipBak/config"
@@ -50,6 +51,10 @@ func BackupCmd(cfg *config.BackupConfig, k *koanf.Koanf) *cobra.Command {
 			}
 
 			cfg.KeepBackups = keepBackups
+
+			if cmd.Flags().Changed("keep-backups") && !cfg.DoCleanup {
+				fmt.Fprintln(os.Stderr, "Warning: --keep-backups was specified, but --cleanup was not set. No cleanup will be performed.")
+			}
 
 			stop := spinner.StartSpinner("Backing up...")
 			err := archive.StartBackup(cfg)
