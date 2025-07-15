@@ -30,21 +30,28 @@ func runICMPPing(opts *Options) error {
 		cmd := exec.Command("ping", "-n", "1", opts.Target)
 		output, err := cmd.CombinedOutput()
 		outputStr := string(output)
+
 		opts.Stats.Total++
 
 		if err != nil || !(strings.Contains(outputStr, "Reply from") || strings.Contains(outputStr, "TTL=")) {
 			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v", opts.Target, err)
+
 			fmt.Println(msg)
+
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
 			}
+
 			opts.Stats.Failures++
 		} else {
 			msg := fmt.Sprintf("[OK] Ping to %s succeeded", opts.Target)
+
 			fmt.Println(msg)
+
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
 			}
+
 			opts.Stats.Successes++
 		}
 
@@ -52,12 +59,14 @@ func runICMPPing(opts *Options) error {
 		if opts.Count != 0 && i >= opts.Count {
 			break
 		}
+
 		time.Sleep(opts.Sleep)
 	}
 
 	if opts.LogToFile && opts.Logger != nil {
 		opts.Logger.Printf("[INFO] Finished ping to %s", opts.Target)
 	}
+
 	return nil
 }
 

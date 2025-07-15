@@ -22,41 +22,58 @@ func defaultHTTPPing(opts *Options) error {
 		select {
 		case <-opts.Ctx.Done():
 			msg := "\n[!] Interrupt received, stopping HTTP ping"
+
 			fmt.Println(msg)
+
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
 			}
+
 			return nil
 		default:
 		}
 
 		opts.Stats.Total++
+
 		req, err := http.NewRequestWithContext(opts.Ctx, http.MethodHead, url, nil)
+
 		var msg string
+
 		if err != nil {
 			msg = fmt.Sprintf("[FAIL] Request to %s failed to build: %v", url, err)
+
 			fmt.Println(msg)
+
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
 			}
+
 			opts.Stats.Failures++
 		} else {
 			start := time.Now()
+
 			resp, err := client.Do(req)
 			if err != nil {
 				msg = fmt.Sprintf("[FAIL] HTTP HEAD request to %s failed: %v", url, err)
+
 				fmt.Println(msg)
+
 				if opts.LogToFile && opts.Logger != nil {
 					opts.Logger.Println(msg)
 				}
+
 				opts.Stats.Failures++
 			} else {
 				msg = fmt.Sprintf("[OK] HTTP HEAD to %s [%d] in %s", url, resp.StatusCode, time.Since(start))
+
 				fmt.Println(msg)
+
 				if opts.LogToFile && opts.Logger != nil {
 					opts.Logger.Println(msg)
 				}
+
 				opts.Stats.Successes++
+
 				resp.Body.Close()
 			}
 		}
@@ -65,6 +82,7 @@ func defaultHTTPPing(opts *Options) error {
 		if opts.Count != 0 && i >= opts.Count {
 			break
 		}
+
 		time.Sleep(opts.Sleep)
 	}
 

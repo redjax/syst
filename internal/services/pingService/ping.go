@@ -55,6 +55,7 @@ func RunPing(opts *Options) error {
 	if opts.UseHTTP {
 		return runHTTPPing(opts)
 	}
+
 	return runICMPPing(opts)
 }
 
@@ -64,5 +65,6 @@ func createLogFilePath(target string) string {
 	safeTarget = strings.ReplaceAll(safeTarget, "/", "_")
 	dateStr := time.Now().Format("2006-01-02")
 	fileName := fmt.Sprintf("%s_pingo_%s.log", dateStr, safeTarget)
+
 	return filepath.Join(os.TempDir(), fileName)
 }
