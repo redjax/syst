@@ -20,7 +20,7 @@ func NewPackageInfoCommand() *cobra.Command {
 func showPackageInfo(cmd *cobra.Command, args []string) error {
 	pkgInfo := version.GetPackageInfo()
 
-	fmt.Printf("Program: %s\nOwner: %s\nRepository Name: %s\nRepository URL: %s\n", pkgInfo.PackageName, pkgInfo.RepoUser, pkgInfo.RepoName, pkgInfo.RepoUrl)
+	fmt.Printf("Program: %s\nOwner: %s\nRepository Name: %s\nRepository URL: %s\nVersion: %s\nCommit: %s\nRelease Date: %s\n", pkgInfo.PackageName, pkgInfo.RepoUser, pkgInfo.RepoName, pkgInfo.RepoUrl, version.Version, version.Commit, version.Date)
 
 	return nil
 }
