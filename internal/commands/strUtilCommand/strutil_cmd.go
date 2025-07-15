@@ -1,8 +1,10 @@
 package strutilcommand
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/redjax/syst/internal/utils/strutils"
@@ -17,6 +19,7 @@ func NewStrUtilCommand() *cobra.Command {
 		toCapital    bool
 		ignoreCase   bool
 		searchString string
+		filePath     string
 		removeList   []string
 		replaceList  []string
 	)
@@ -35,18 +38,41 @@ Examples:
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var input string
-			if len(args) > 0 {
-				input = args[0]
-			} else {
-				// Read from stdin (will read until EOF)
-				inBytes, err := io.ReadAll(cmd.InOrStdin())
+
+			switch {
+			case filePath != "":
+				// Read from file
+				fmt.Printf("Results from file '%s':\n\n", filePath)
+
+				content, err := os.ReadFile(filePath)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to read file: %w", err)
 				}
 
-				input = strings.TrimRight(string(inBytes), "\n")
+				input = string(content)
+
+			case len(args) > 0:
+				// Use CLI argument
+				input = args[0]
+
+			default:
+				// Use stdin
+				fmt.Printf("Results from stdin:\n")
+
+				inBytes, err := io.ReadAll(cmd.InOrStdin())
+				if err != nil {
+					return fmt.Errorf("failed to read from stdin: %w", err)
+				}
+
+				input = string(inBytes)
 			}
 
+			// Ensure stdin is not empty
+			if strings.TrimSpace(input) == "" {
+				return errors.New("input is empty")
+			}
+
+			// Then assign result for further processing
 			result := input
 
 			// Only do search if the --search flag is used
@@ -112,6 +138,7 @@ Examples:
 	cmd.Flags().BoolVar(&toCapital, "capitalize", false, "Transform string to Capitalized case")
 	cmd.Flags().BoolVarP(&ignoreCase, "ignore-case", "i", false, "Perform remove/replace operations case-insensitively")
 
+	cmd.Flags().StringVarP(&filePath, "file", "f", "", "Path to input file (overrides argument or stdin)")
 	cmd.Flags().StringVarP(&searchString, "search", "s", "", "Search for a substring (like grep)")
 	cmd.Flags().StringArrayVar(&removeList, "remove", []string{}, "Remove all instances of provided string(s)")
 	cmd.Flags().StringArrayVar(&replaceList, "replace", []string{}, "Replace substrings using 'search/replace' syntax (supports multiple)")

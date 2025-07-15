@@ -34,3 +34,5 @@ Args:
   * Search a string for a substring
 * `cat path/to/somelogfile.log | syst strutil --search "this is the string to find" -i`
   * Read the results of the `cat` operation and do case-insensitive substring search on the contents
+  * The CLI also accepts a `-f/--file` string, which is a path to a file to read and search
+    * `syst strutil -f path/to/filename.ext --search "this is the string to find" -i`
