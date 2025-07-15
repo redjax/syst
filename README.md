@@ -27,6 +27,7 @@
 - [Install](#install)
   - [From Release](#from-release)
   - [Build Locally](#build-locally)
+- [Upgrading](#upgrading)
 - [Usage](#usage)
   - [Commands](#commands)
 
@@ -39,6 +40,10 @@ Install a release from the [releases page](https://github.com/redjax/syst/releas
 ### Build Locally
 
 Clone this repository and run [one of the build scripts](./scripts/build/).
+
+## Upgrading
+
+The CLI includes a `self` subcommand, which allows for running `syst self upgrade` to download a new release. The new version will be downloaded to `syst.new` in the same path as the existing `syst` binary, and on the next execution `syst` will replace the old binary with the new one.
 
 ## Usage
 
