@@ -9,13 +9,14 @@ import (
 
 func NewStrUtilCommand() *cobra.Command {
 	var (
-		toUpper     bool
-		toLower     bool
-		toTitle     bool
-		toCapital   bool
-		ignoreCase  bool
-		removeList  []string
-		replaceList []string
+		toUpper      bool
+		toLower      bool
+		toTitle      bool
+		toCapital    bool
+		ignoreCase   bool
+		searchString string
+		removeList   []string
+		replaceList  []string
 	)
 
 	cmd := &cobra.Command{
@@ -33,6 +34,15 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
 			result := target
+
+			// If --search is set, do the grep-like check first
+			if searchString != "" {
+				found := strutils.SearchSubstring(result, searchString, ignoreCase)
+				if !found {
+					// Silent success, like grep (but you could change behavior)
+					return nil
+				}
+			}
 
 			// Apply removals using utility function
 			if len(removeList) > 0 {
@@ -62,6 +72,14 @@ Examples:
 				result = strutils.Capitalize(result)
 			}
 
+			// grep-like substring search is --search is present
+			if searchString != "" {
+				found := strutils.SearchSubstring(result, searchString, ignoreCase)
+				if !found {
+					return nil
+				}
+			}
+
 			fmt.Println(result)
 
 			return nil
@@ -74,6 +92,7 @@ Examples:
 	cmd.Flags().BoolVar(&toCapital, "capitalize", false, "Transform string to Capitalized case")
 	cmd.Flags().BoolVarP(&ignoreCase, "ignore-case", "i", false, "Perform remove/replace operations case-insensitively")
 
+	cmd.Flags().StringVarP(&searchString, "search", "s", "", "Search for a substring (like grep)")
 	cmd.Flags().StringArrayVar(&removeList, "remove", []string{}, "Remove all instances of provided string(s)")
 	cmd.Flags().StringArrayVar(&replaceList, "replace", []string{}, "Replace substrings using 'search/replace' syntax (supports multiple)")
 

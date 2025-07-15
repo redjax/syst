@@ -82,3 +82,13 @@ func ReplaceSubstrings(s string, replaceList []string, ignoreCase bool) (string,
 
 	return s, warnings
 }
+
+// SearchSubstring returns true if substr is found in s, with optional case-insensitivity.
+func SearchSubstring(s, substr string, ignoreCase bool) bool {
+	if ignoreCase {
+		s = strings.ToLower(s)
+		substr = strings.ToLower(substr)
+	}
+
+	return strings.Contains(s, substr)
+}
