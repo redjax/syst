@@ -13,9 +13,13 @@ import (
 
 func NewPingCommand() *cobra.Command {
 	var (
-		count     int
-		sleep     int
-		useHTTP   bool
+		// Number of times to ping target
+		count int
+		// Number of second(s) to sleep between pings
+		sleep int
+		// Send HTTP HEAD request instead of ICMP ping
+		useHTTP bool
+		// When present, output ping logs to a file
 		logToFile bool
 	)
 
@@ -45,6 +49,7 @@ Supports flags like count, delay between pings, and file-based logging.`,
 				Stats:     stats,
 			}
 
+			// Start ping
 			err := pingService.RunPing(&opts)
 			if err != nil {
 				return err
@@ -68,6 +73,7 @@ Supports flags like count, delay between pings, and file-based logging.`,
 		},
 	}
 
+	// Add ping command flags
 	cmd.Flags().IntVarP(&count, "count", "c", 3, "Number of pings to send (0 = infinite)")
 	cmd.Flags().IntVarP(&sleep, "sleep", "s", 1, "Seconds to sleep between pings")
 	cmd.Flags().BoolVar(&useHTTP, "http", false, "Send HTTP HEAD request instead of ICMP ping")

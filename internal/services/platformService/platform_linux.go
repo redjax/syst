@@ -14,6 +14,7 @@ func detectOSRelease() string {
 	data, err := os.ReadFile("/etc/os-release")
 	if err == nil {
 		lines := strings.Split(string(data), "\n")
+
 		for _, line := range lines {
 			if strings.HasPrefix(line, "PRETTY_NAME=") {
 				return strings.Trim(line[len("PRETTY_NAME="):], "\"")
@@ -34,6 +35,7 @@ func detectUptime() time.Duration {
 			}
 		}
 	}
+
 	return 0
 }
 
@@ -41,6 +43,7 @@ func detectTotalRAM() uint64 {
 	data, err := os.ReadFile("/proc/meminfo")
 	if err == nil {
 		lines := strings.Split(string(data), "\n")
+
 		for _, line := range lines {
 			if strings.HasPrefix(line, "MemTotal:") {
 				fields := strings.Fields(line)
@@ -52,5 +55,6 @@ func detectTotalRAM() uint64 {
 			}
 		}
 	}
+
 	return 0
 }

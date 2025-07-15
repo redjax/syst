@@ -51,6 +51,7 @@ func platformConstants() PlatformConstants {
 	}
 }
 
+// detectWindowsPackageManager detects if a package manager is installed, i.e. winget, scoop, or choco
 func detectWindowsPackageManager() string {
 	if utils.IsCommandAvailable("scoop") {
 		return "scoop"
@@ -61,56 +62,73 @@ func detectWindowsPackageManager() string {
 	if utils.IsCommandAvailable("choco") {
 		return "choco"
 	}
+
+	// Return 'winget' by default if no other is detected
 	return "winget"
 }
 
+// windowsRelease returns the current Windows release info
 func windowsRelease() string {
 	// Simplified: you can expand this by reading registry or ver command
 	return "windows"
 }
 
+// getHostname returns the hostname of the current machine
 func getHostname() string {
 	hn, err := os.Hostname()
 	if err != nil {
 		return "unknown"
 	}
+
 	return hn
 }
 
+// getCPUModel returns the CPU make/model info
 func getCPUModel() string {
 	if val := os.Getenv("PROCESSOR_IDENTIFIER"); val != "" {
 		return val
 	}
+
 	return "unknown"
 }
 
+// getTotalRam returns a byte representation of the total memory on the current machine
 func getTotalRAM() uint64 {
 	var memStatus memoryStatusEx
+
 	memStatus.dwLength = uint32(unsafe.Sizeof(memStatus))
+
 	ret, _, err := procGlobalMemoryStatusEx.Call(uintptr(unsafe.Pointer(&memStatus)))
 	if ret == 0 || err != syscall.Errno(0) {
 		return 0
 	}
+
 	return memStatus.ullTotalPhys
 }
 
+// getDefaultShell returns the user's shell. This will always be 'powershell'
 func getDefaultShell() string {
 	return "powershell"
 }
 
+// getHomeDir returns the user's $env:USERPROFILE directory
 func getHomeDir() string {
 	usr, err := os.UserHomeDir()
 	if err != nil {
 		return ""
 	}
+
 	return usr
 }
 
+// getUptime returns the machine's uptime
 func getUptime() time.Duration {
 	ret, _, _ := procGetTickCount64.Call()
+
 	return time.Duration(ret) * time.Millisecond
 }
 
+// getRootFilesystem returns the filesystem type
 func getRootFilesystemType() string {
 	// Windows typically uses NTFS; detecting programmatically is complex.
 	return "NTFS"

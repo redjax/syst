@@ -8,22 +8,33 @@ import (
 
 func NewScanPathCommand() *cobra.Command {
 	var (
-		path   string
-		limit  int
+		// Target path to scan
+		path string
+		// Limit scanned items
+		limit int
+		// Sort by column (name, size, created, modified, owner, permissions)
 		sortBy string
-		order  string
+		// Sort order, 'asc' or 'desc'
+		order string
+		// Filter results by column, i.e. 'size <10MB', 'created >2022-01-01'
 		filter string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "scanpath",
 		Short: "Scan a directory and list items with metadata",
-		Long:  "Scan a directory and list files with metadata like size, creation time, permissions, etc.",
+		Long: `Scan a directory and list files with metadata like size, creation time, permissions, etc.
+
+Control the scan & results using flags like --limit (to limit the number of items scanned), and --order (to control sorting order, asc/desc).
+
+Run syst scanpath --help to see all options.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return scan.ScanDirectory(path, limit, sortBy, order, filter) // ✅ direct call
 		},
 	}
 
+	// Add command flags
 	cmd.Flags().StringVarP(&path, "path", "p", ".", "Directory path to scan")
 	cmd.Flags().IntVarP(&limit, "limit", "l", 0, "Limit number of results (0 = unlimited)")
 	cmd.Flags().StringVarP(&sortBy, "sort", "s", "name", "Column to sort by (name, size, created, modified, owner, permissions)")

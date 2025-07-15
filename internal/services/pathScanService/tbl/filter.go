@@ -16,6 +16,7 @@ type FilterExpr struct {
 	Value    string
 }
 
+// ParseFilter parses an input string like >100MB
 func ParseFilter(filter string) (*FilterExpr, error) {
 	// Regex matches: column <operator> value, e.g. "size <10MB"
 	re := regexp.MustCompile(`^\s*([a-zA-Z]+)\s*([<>=~*])\s*(.+)$`)
@@ -31,11 +32,14 @@ func ParseFilter(filter string) (*FilterExpr, error) {
 	}, nil
 }
 
+// MatchFilter matches scanned files based on a provided filter, i.e. --filter size >100MB
 func MatchFilter(cell, op, val, column string) bool {
 	switch column {
 	case "size":
 		cellBytes, _ := strconv.ParseInt(cell, 10, 64)
-		valBytes := convert.ParseByteSize(val) // implement this to handle "10MB", "1GB", etc.
+		// Handle "10MB", "1GB", etc.
+		valBytes := convert.ParseByteSize(val)
+
 		switch op {
 		case "<":
 			return cellBytes < valBytes
@@ -47,6 +51,7 @@ func MatchFilter(cell, op, val, column string) bool {
 	case "created", "modified":
 		cellTime, _ := time.Parse("2006-01-02 15:04:05", cell)
 		valTime, _ := time.Parse("2006-01-02", val)
+
 		switch op {
 		case "<":
 			return cellTime.Before(valTime)
@@ -71,23 +76,29 @@ func MatchFilter(cell, op, val, column string) bool {
 			return strings.Contains(strings.ToLower(cell), strings.ToLower(val))
 		}
 	}
+
 	return false
 }
 
+// ApplyFilter applies the filter to a set of results
 func ApplyFilter(results [][]string, filter *FilterExpr) [][]string {
 	if filter == nil {
 		return results
 	}
+
 	// map[string]int for your columns
 	idx, ok := columnIndices[filter.Column]
 	if !ok {
 		return results // Unknown column, skip filter
 	}
+
 	filtered := make([][]string, 0, len(results))
+
 	for _, row := range results {
 		if MatchFilter(row[idx], filter.Operator, filter.Value, filter.Column) {
 			filtered = append(filtered, row)
 		}
 	}
+
 	return filtered
 }

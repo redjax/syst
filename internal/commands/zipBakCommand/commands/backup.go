@@ -50,23 +50,29 @@ func BackupCmd(cfg *config.BackupConfig, k *koanf.Koanf) *cobra.Command {
 				return fmt.Errorf("backup source directory is required")
 			}
 
+			// Set number of backups to keep
 			cfg.KeepBackups = keepBackups
 
+			// Detect backup flags missing a --cleanup flag
 			if cmd.Flags().Changed("keep-backups") && !cfg.DoCleanup {
 				fmt.Fprintln(os.Stderr, "Warning: --keep-backups was specified, but --cleanup was not set. No cleanup will be performed.")
 			}
 
-			stop := spinner.StartSpinner("Backing up...")
+			// Start spinner & do backup
+			stop := spinner.StartSpinner(fmt.Sprintf("Backing up %s to %s ...", cfg.BackupSrc, cfg.OutputDir))
 			err := archive.StartBackup(cfg)
 			stop()
 			if err != nil {
 				return err
 			}
+
 			fmt.Println("Backup completed successfully.")
+
 			return nil
 		},
 	}
 
+	// Add flags to backup command
 	cmd.Flags().StringVarP(&backupSrc, "src", "s", "", "Source directory to backup")
 	cmd.Flags().StringVarP(&outputDir, "output-dir", "o", "", "Output directory for the backup")
 	cmd.Flags().StringVarP(&backupName, "filename", "f", "", "Base filename for the backup")

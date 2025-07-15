@@ -16,6 +16,7 @@ import (
 	"github.com/redjax/syst/internal/utils"
 )
 
+// platformConstants assembles mac-specific platform info
 func platformConstants() PlatformConstants {
 	return PlatformConstants{
 		PackageManager: detectMacPackageManager(),
@@ -35,6 +36,7 @@ func platformConstants() PlatformConstants {
 	}
 }
 
+// detectMacPackageManager detects if a package manager (i.e. brew) is installed
 func detectMacPackageManager() string {
 	if utils.IsCommandAvailable("brew") {
 		return "brew"
@@ -42,66 +44,82 @@ func detectMacPackageManager() string {
 	return ""
 }
 
+// darwinRelease gets the Mac OS release info
 func darwinRelease() string {
 	out, err := exec.Command("sw_vers", "-productVersion").Output()
 	if err != nil {
 		return "unknown"
 	}
+
 	return strings.TrimSpace(string(out))
 }
 
+// getHostname returns the hostname of the current machine
 func getHostname() string {
 	hn, err := os.Hostname()
 	if err != nil {
 		return "unknown"
 	}
+
 	return hn
 }
 
+// getCPUModel returns the CPU make/model info
 func getCPUModel() string {
 	out, err := exec.Command("sysctl", "-n", "machdep.cpu.brand_string").Output()
 	if err != nil {
 		return "unknown"
 	}
+
 	return strings.TrimSpace(string(out))
 }
 
+// getTotalRam returns a byte representation of the total memory on the current machine
 func getTotalRAM() uint64 {
 	out, err := exec.Command("sysctl", "-n", "hw.memsize").Output()
 	if err != nil {
 		return 0
 	}
+
 	memStr := strings.TrimSpace(string(out))
 	mem, err := strconv.ParseUint(memStr, 10, 64)
 	if err != nil {
 		return 0
 	}
+
 	return mem
 }
 
+// getDefaultShell returns the user's shell
 func getDefaultShell() string {
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		return "unknown"
 	}
+
 	return shell
 }
 
+// getHomeDir returns the user's $HOME directory
 func getHomeDir() string {
 	usr, err := os.UserHomeDir()
 	if err != nil {
 		return ""
 	}
+
 	return usr
 }
 
+// getUptime returns the machine's uptime
 func getUptime() time.Duration {
 	out, err := exec.Command("sysctl", "-n", "kern.boottime").Output()
 	if err != nil {
 		return 0
 	}
+
 	// Example output: { sec = 1689253200, usec = 0 } Sat Jul 13 17:00:00 2024
 	parts := strings.Split(string(out), " ")
+
 	for i, part := range parts {
 		if part == "sec" && i+2 < len(parts) {
 			secStr := strings.Trim(parts[i+2], ",")
@@ -112,9 +130,11 @@ func getUptime() time.Duration {
 			}
 		}
 	}
+
 	return 0
 }
 
+// getRootFilesystem returns the filesystem type
 func getRootFilesystemType() string {
 	var stat syscall.Statfs_t
 	err := syscall.Statfs("/", &stat)

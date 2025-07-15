@@ -12,6 +12,7 @@ func NewVersionCommand() *cobra.Command {
 		Use:   "version",
 		Short: "Print CLI's version",
 		Run: func(cmd *cobra.Command, args []string) {
+			// Print version string
 			fmt.Printf("version:%s commit:%s date:%s", version.Version, version.Commit, version.Date)
 		},
 	}
