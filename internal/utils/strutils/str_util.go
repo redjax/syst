@@ -1,6 +1,7 @@
 package strutils
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 
@@ -41,27 +42,43 @@ func Capitalize(s string) string {
 	return string(runes)
 }
 
-// RemoveSubstrings removes all instances of the substrings in the list from the input string.
-func RemoveSubstrings(s string, removeList []string) string {
+// Updated function signature
+func RemoveSubstrings(s string, removeList []string, ignoreCase bool) string {
 	for _, r := range removeList {
-		s = strings.ReplaceAll(s, r, "")
+		if ignoreCase {
+			// Build case-insensitive regex pattern
+			re := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(r))
+			s = re.ReplaceAllString(s, "")
+		} else {
+			s = strings.ReplaceAll(s, r, "")
+		}
 	}
+
 	return s
 }
 
 // ReplaceSubstrings applies search/replace substitutions in the form "search/replace"
-func ReplaceSubstrings(s string, replaceList []string) (string, []string) {
+func ReplaceSubstrings(s string, replaceList []string, ignoreCase bool) (string, []string) {
 	var warnings []string
 
-	for _, r := range replaceList {
-		parts := strings.SplitN(r, "/", 2)
+	for _, entry := range replaceList {
+		parts := strings.SplitN(entry, "/", 2)
 		if len(parts) != 2 {
-			warnings = append(warnings, r)
+			warnings = append(warnings, entry)
 			continue
 		}
+
 		search := parts[0]
 		replace := parts[1]
-		s = strings.ReplaceAll(s, search, replace)
+
+		if ignoreCase {
+			// Use regexp with case-insensitive flag
+			re := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(search))
+			s = re.ReplaceAllString(s, replace)
+		} else {
+			s = strings.ReplaceAll(s, search, replace)
+		}
 	}
+
 	return s, warnings
 }

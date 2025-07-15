@@ -13,6 +13,7 @@ func NewStrUtilCommand() *cobra.Command {
 		toLower     bool
 		toTitle     bool
 		toCapital   bool
+		ignoreCase  bool
 		removeList  []string
 		replaceList []string
 	)
@@ -33,6 +34,20 @@ Examples:
 			target := args[0]
 			result := target
 
+			// Apply removals using utility function
+			if len(removeList) > 0 {
+				result = strutils.RemoveSubstrings(result, removeList, ignoreCase)
+			}
+
+			// Apply replacements using utility function
+			if len(replaceList) > 0 {
+				var warnings []string
+				result, warnings = strutils.ReplaceSubstrings(result, replaceList, ignoreCase)
+				for _, bad := range warnings {
+					fmt.Fprintf(cmd.ErrOrStderr(), "[warn] Invalid --replace format: '%s'. Use 'search/replace'\n", bad)
+				}
+			}
+
 			// Case transformations
 			if toUpper {
 				result = strutils.ToUpper(result)
@@ -47,20 +62,6 @@ Examples:
 				result = strutils.Capitalize(result)
 			}
 
-			// Apply removals using utility function
-			if len(removeList) > 0 {
-				result = strutils.RemoveSubstrings(result, removeList)
-			}
-
-			// Apply replacements using utility function
-			if len(replaceList) > 0 {
-				var warnings []string
-				result, warnings = strutils.ReplaceSubstrings(result, replaceList)
-				for _, bad := range warnings {
-					fmt.Fprintf(cmd.ErrOrStderr(), "[warn] Invalid --replace format: '%s'. Use 'search/replace'\n", bad)
-				}
-			}
-
 			fmt.Println(result)
 
 			return nil
@@ -71,6 +72,8 @@ Examples:
 	cmd.Flags().BoolVar(&toLower, "lower", false, "Transform string to lowercase")
 	cmd.Flags().BoolVar(&toTitle, "title", false, "Transform string to Title Case")
 	cmd.Flags().BoolVar(&toCapital, "capitalize", false, "Transform string to Capitalized case")
+	cmd.Flags().BoolVarP(&ignoreCase, "ignore-case", "i", false, "Perform remove/replace operations case-insensitively")
+
 	cmd.Flags().StringArrayVar(&removeList, "remove", []string{}, "Remove all instances of provided string(s)")
 	cmd.Flags().StringArrayVar(&replaceList, "replace", []string{}, "Replace substrings using 'search/replace' syntax (supports multiple)")
 
