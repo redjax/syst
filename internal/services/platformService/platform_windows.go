@@ -4,7 +4,9 @@
 package platformservice
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -54,4 +56,21 @@ func detectTotalRAM() uint64 {
 	proc.Call(uintptr(unsafe.Pointer(&m)))
 
 	return m.ullTotalPhys
+}
+
+// detectDefaultShell checks for PowerShell 7, then PowerShell 5, then cmd.exe
+func detectDefaultShell() string {
+	// Check if pwsh (PowerShell 7+) is available in PATH
+	if shellPath, err := exec.LookPath("pwsh.exe"); err == nil {
+		// Return just the name (can also return full path if desired)
+		return filepath.Base(shellPath) // "pwsh.exe"
+	}
+
+	// Check if powershell (v5) is available
+	if shellPath, err := exec.LookPath("powershell.exe"); err == nil {
+		return filepath.Base(shellPath) // "powershell.exe"
+	}
+
+	// Fallback: use ComSpec (usually "cmd.exe")
+	return filepath.Base(os.Getenv("ComSpec"))
 }

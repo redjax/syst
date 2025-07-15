@@ -5,6 +5,7 @@ package platformservice
 
 import (
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -57,4 +58,19 @@ func detectTotalRAM() uint64 {
 	}
 
 	return 0
+}
+
+// detectDefaultShell tries to find the user's default shell.
+func detectDefaultShell() string {
+	switch runtime.GOOS {
+	case "windows":
+		return os.Getenv("ComSpec") // Usually "C:\\Windows\\System32\\cmd.exe"
+	default:
+		shell := os.Getenv("SHELL")
+		if shell != "" {
+			return shell
+		}
+
+		return "/bin/sh"
+	}
 }
