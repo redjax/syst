@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/redjax/syst/internal/version"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +24,9 @@ func NewUpgradeCommand() *cobra.Command {
 }
 
 func runUpgrade(cmd *cobra.Command, args []string) error {
-	const repo = "redjax/syst"
+	pkgInfo := version.GetPackageInfo()
+
+	repo := fmt.Sprintf("%s/%s", pkgInfo.RepoUser, pkgInfo.RepoName)
 
 	apiURL := "https://api.github.com/repos/" + repo + "/releases/latest"
 
