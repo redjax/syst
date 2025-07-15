@@ -1,6 +1,10 @@
 package pingCommand
 
 import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/redjax/syst/internal/services/pingService"
@@ -25,14 +29,35 @@ Supports flags like count, delay between pings, and file-based logging.`,
 		Args: cobra.ExactArgs(1), // Requires exactly one argument (target)
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
+
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+			defer stop()
+
+			stats := &pingService.PingStats{}
+
 			opts := pingService.Options{
 				Target:    target,
 				Count:     count,
 				Sleep:     time.Duration(sleep) * time.Second,
 				UseHTTP:   useHTTP,
 				LogToFile: logToFile,
+				Ctx:       ctx,
+				Stats:     stats,
 			}
-			return pingService.RunPing(opts)
+
+			err := pingService.RunPing(opts)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("-------------")
+			fmt.Println("Ping Summary:")
+			fmt.Printf("  Total:     %d\n", stats.Total)
+			fmt.Printf("  Succeeded: %d\n", stats.Successes)
+			fmt.Printf("  Failed:    %d\n", stats.Failures)
+			fmt.Println("-------------")
+
+			return nil
 		},
 	}
 

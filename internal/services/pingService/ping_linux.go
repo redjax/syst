@@ -10,23 +10,31 @@ import (
 )
 
 func runICMPPing(opts Options) error {
-	countArg := fmt.Sprintf("%d", opts.Count)
-	if opts.Count == 0 {
-		countArg = "999999" // no infinite in ping; pick a large arbitrary number
-	}
+	fmt.Printf("Starting ICMP ping to %s (Ctrl+C to stop)...\n", opts.Target)
 
 	i := 0
 	for opts.Count == 0 || i < opts.Count {
-		i++
-		cmd := exec.Command("ping", "-c", countArg, opts.Target)
-		output, err := cmd.CombinedOutput()
-
-		if err != nil || !strings.Contains(string(output), "bytes from") {
-			fmt.Printf("[FAIL] Ping to %s failed: %v\n", opts.Target, err)
-		} else {
-			fmt.Printf("[OK] ICMP ping to %s successful\n", opts.Target)
+		select {
+		case <-opts.Ctx.Done():
+			fmt.Println("\n[!] Interrupt received, stopping.")
+			return nil
+		default:
+			// continue
 		}
 
+		cmd := exec.Command("ping", "-c", "1", opts.Target)
+		output, err := cmd.CombinedOutput()
+		opts.Stats.Total++
+
+		if err != nil || !strings.Contains(string(output), "bytes from") {
+			fmt.Printf("[FAIL] Ping to %s failed\n", opts.Target)
+			opts.Stats.Failures++
+		} else {
+			fmt.Printf("[OK] Ping to %s succeeded\n", opts.Target)
+			opts.Stats.Successes++
+		}
+
+		i++
 		if opts.Count != 0 && i >= opts.Count {
 			break
 		}

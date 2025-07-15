@@ -1,6 +1,7 @@
 package pingService
 
 import (
+	"context"
 	"strings"
 	"time"
 )
@@ -11,6 +12,15 @@ type Options struct {
 	Sleep     time.Duration // e.g. 1s, 2s
 	UseHTTP   bool
 	LogToFile bool // TODO: to be implemented
+
+	Ctx   context.Context
+	Stats *PingStats
+}
+
+type PingStats struct {
+	Successes int
+	Failures  int
+	Total     int
 }
 
 func RunPing(opts Options) error {
