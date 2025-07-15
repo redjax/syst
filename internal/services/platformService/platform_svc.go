@@ -132,6 +132,7 @@ func detectDefaultShell() string {
 		if shell != "" {
 			return shell
 		}
+
 		return "/bin/sh"
 	}
 }
