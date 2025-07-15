@@ -83,6 +83,15 @@ fi
 ## Set environment variables for Go build
 export GOOS="$BuildOS"
 export GOARCH="$BuildArch"
+## Auto-populate version info
+GitVersion=$(git describe --tags --always 2>/dev/null || echo "dev")
+GitCommit=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+BuildDate=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+## Build -ldflags string
+LD_FLAGS="-s -w \
+  -X 'github.com/redjax/syst/internal/version.Version=${GitVersion}' \
+  -X 'github.com/redjax/syst/internal/version.Commit=${GitCommit}' \
+  -X 'github.com/redjax/syst/internal/version.Date=${BuildDate}'"
 
 ## Ensure output directory exists
 mkdir -p "$BuildOutputDir"
@@ -93,7 +102,7 @@ echo -e "Building $BuildTarget, outputting to $BuildOutput"
 echo "-- [ Build start"
 
 # Run go build
-if go build -o "$BuildOutput" "$BuildTarget"; then
+if go build -ldflags="$LD_FLAGS" -o "$BuildOutput" "$BuildTarget"; then
   echo -e "Build successful"
 else
   echo "Error building app."
