@@ -13,10 +13,17 @@ func NewConstantsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "constants",
 		Short: "Show platform constants",
+		Long: `syst generates a set of global constants based on the current platform. The show constants command displays those constants to the user.
+
+Constant data includes: system hostname & uptime, the $HOME path and default shell, OS/release info, CPU info, total RAM, and the filesystem.
+		`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// Get constants
 			consts := constants.GetPlatformConstants()
+			// Convert TotalRAM bytes to human-readable string
 			totalRam := utils.BytesToHumanReadable(consts.TotalRAM)
 
+			// Print constants
 			fmt.Printf("Uptime=%s\n", consts.Uptime)
 			fmt.Printf("Hostname=%s\n", consts.Hostname)
 			fmt.Printf("Default Shell=%s\n", consts.DefaultShell)
