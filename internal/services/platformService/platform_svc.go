@@ -2,7 +2,6 @@ package platformservice
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 	"runtime"
 	"time"
@@ -120,19 +119,4 @@ func GatherPlatformInfo() (*PlatformInfo, error) {
 	}
 
 	return pi, nil
-}
-
-// detectDefaultShell tries to find the user's default shell.
-func detectDefaultShell() string {
-	switch runtime.GOOS {
-	case "windows":
-		return os.Getenv("ComSpec") // Usually "C:\\Windows\\System32\\cmd.exe"
-	default:
-		shell := os.Getenv("SHELL")
-		if shell != "" {
-			return shell
-		}
-
-		return "/bin/sh"
-	}
 }
