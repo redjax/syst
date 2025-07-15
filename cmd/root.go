@@ -10,6 +10,7 @@ import (
 
 	// Import your CLI subcommands
 	// "github.com/redjax/syst/internal/commands"
+	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
@@ -66,6 +67,7 @@ func init() {
 	rootCmd.AddCommand(showCommand.NewShowCmd())
 	rootCmd.AddCommand(zipBak.NewZipbakCommand())
 	rootCmd.AddCommand(scanPath.NewScanPathCommand())
+	rootCmd.AddCommand(pingo.NewPingCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
