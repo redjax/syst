@@ -28,6 +28,7 @@
   - [From Release](#from-release)
   - [Build Locally](#build-locally)
 - [Usage](#usage)
+  - [Commands](#commands)
 
 ## Install
 
@@ -42,3 +43,7 @@ Clone this repository and run [one of the build scripts](./scripts/build/).
 ## Usage
 
 Run `syst --help` to print the help menu. For each subcommand, i.e. `syst show`, you can also run `--help` to see scoped parameters for that subcommand.
+
+### Commands
+
+Browse the [commands/ directory](./internal/commands/) to read more about subcommands for this CLI.
