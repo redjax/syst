@@ -6,8 +6,8 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 
-	"github.com/redjax/syst/internal/commands/zipBak/commands"
-	"github.com/redjax/syst/internal/commands/zipBak/config"
+	"github.com/redjax/syst/internal/commands/zipBakCommand/commands"
+	"github.com/redjax/syst/internal/commands/zipBakCommand/config"
 
 	"github.com/spf13/cobra"
 )

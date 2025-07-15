@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/redjax/syst/internal/commands/zipBak/archive"
-	"github.com/redjax/syst/internal/commands/zipBak/config"
+	"github.com/redjax/syst/internal/commands/zipBakCommand/archive"
+	"github.com/redjax/syst/internal/commands/zipBakCommand/config"
 	"github.com/redjax/syst/internal/utils/spinner"
 
 	"github.com/knadh/koanf/v2"

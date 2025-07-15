@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redjax/syst/internal/commands/zipBak/config"
+	"github.com/redjax/syst/internal/commands/zipBakCommand/config"
 )
 
 func shouldIgnore(path, src string, ignore []string) bool {
