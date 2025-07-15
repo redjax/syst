@@ -117,7 +117,11 @@ jobs:
             fi
 
             ## Build the binary for the target platform
-            go build -o dist/$BIN_FILE $MAIN_PACKAGE_PATH
+            go build -ldflags "-s -w \
+              -X 'github.com/redjax/syst/internal/version.Version=${VERSION}' \
+              -X 'github.com/redjax/syst/internal/version.Commit=$(git rev-parse --short HEAD)' \
+              -X 'github.com/redjax/syst/internal/version.Date=$(date -u +%Y-%m-%dT%H:%M:%SZ)'" \
+              -o "dist/$BIN_FILE" "$MAIN_PACKAGE_PATH"
             if [ $? -ne 0 ]; then
               echo "Build failed for $platform"
               exit 1
