@@ -9,7 +9,7 @@
     The name of your executable, i.e. ./`$BinName.
 
     .PARAMETER BuildOS
-    The OS to build for. Full ist available at https://github.com/golang/go/blob/master/src/internal/syslist/syslist.go
+    The OS to build for. Full list available at https://github.com/golang/go/blob/master/src/internal/syslist/syslist.go
 
     .PARAMETER BuildArch
     The CPU architecture to build for. A full list does not seem to be available,
@@ -22,7 +22,7 @@
     The name of the file to build (the entrypoint for your app).
 
     .EXAMPLE
-    .\build.ps1 -BinName "mycli" -BuildOS "windows" -BuildArch "amd64" -BuildOutputDir "dist/"
+    .\build.ps1 -BinName "syst" -BuildOS "windows" -BuildArch "amd64" -BuildOutputDir "dist/"
 #>
 Param(
     [Parameter(Mandatory = $false, HelpMessage = "The name of your executable, i.e. ./`$BinName.")]
@@ -36,7 +36,7 @@ Param(
     [Parameter(Mandatory = $false, HelpMessage = "The name of the file to build (the entrypoint for your app).")]
     $BuildTarget = "./cmd/entrypoint",
     [Parameter(Mandatory = $false, HelpMessage = "The name you gave the app during go mod init. Check in go.mod to see the value the app is using.")]
-    $ModulePath = "github.com/redjax/syst/internal/version"
+    $ModulePath = "github.com/redjax/syst"
 )
 
 ## Get Git metadata
