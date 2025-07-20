@@ -12,7 +12,7 @@ Portable git operations, like pruning local branches that have been deleted from
 
 ## Usage
 
-Run with`--help` to see help menu & args.
+Run with `--help` to see help menu & args.
 
 ## Subcommands
 
