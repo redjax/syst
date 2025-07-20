@@ -74,3 +74,23 @@ func detectDefaultShell() string {
 	// Fallback: use ComSpec (usually "cmd.exe")
 	return filepath.Base(os.Getenv("ComSpec"))
 }
+
+func detectDNSServers() []string {
+	out, err := exec.Command("nslookup").Output()
+	if err != nil {
+		return nil
+	}
+
+	var servers []string
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		if strings.Contains(strings.ToLower(line), "address:") {
+			fields := strings.Fields(line)
+			if len(fields) > 1 {
+				servers = append(servers, fields[1])
+			}
+		}
+	}
+
+	return servers
+}
