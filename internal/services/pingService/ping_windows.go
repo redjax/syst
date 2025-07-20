@@ -34,7 +34,7 @@ func runICMPPing(opts *Options) error {
 		opts.Stats.Total++
 
 		if err != nil || !(strings.Contains(outputStr, "Reply from") || strings.Contains(outputStr, "TTL=")) {
-			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v", opts.Target, err)
+			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v (#%d)", opts.Target, err, i)
 
 			fmt.Println(msg)
 
@@ -44,7 +44,7 @@ func runICMPPing(opts *Options) error {
 
 			opts.Stats.Failures++
 		} else {
-			msg := fmt.Sprintf("[OK] Ping to %s succeeded", opts.Target)
+			msg := fmt.Sprintf("[OK] Ping to %s succeeded (#%d)", opts.Target, i)
 
 			fmt.Println(msg)
 

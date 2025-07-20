@@ -40,7 +40,7 @@ func defaultHTTPPing(opts *Options) error {
 		var msg string
 
 		if err != nil {
-			msg = fmt.Sprintf("[FAIL] Request to %s failed to build: %v", url, err)
+			msg = fmt.Sprintf("[FAIL] Request to %s failed to build: %v (#%d)", url, err, i)
 
 			fmt.Println(msg)
 
@@ -54,7 +54,7 @@ func defaultHTTPPing(opts *Options) error {
 
 			resp, err := client.Do(req)
 			if err != nil {
-				msg = fmt.Sprintf("[FAIL] HTTP HEAD request to %s failed: %v", url, err)
+				msg = fmt.Sprintf("[FAIL] HTTP HEAD request to %s failed: %v (#%d)", url, err, i)
 
 				fmt.Println(msg)
 
@@ -64,7 +64,7 @@ func defaultHTTPPing(opts *Options) error {
 
 				opts.Stats.Failures++
 			} else {
-				msg = fmt.Sprintf("[OK] HTTP HEAD to %s [%d] in %s", url, resp.StatusCode, time.Since(start))
+				msg = fmt.Sprintf("[OK] HTTP HEAD to %s [%d] in %s (#%d)", url, resp.StatusCode, time.Since(start), i)
 
 				fmt.Println(msg)
 
