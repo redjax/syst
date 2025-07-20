@@ -12,6 +12,7 @@ import (
 
 func NewPlatformCmd() *cobra.Command {
 	var properties []string
+	var includeNet bool
 
 	cmd := &cobra.Command{
 		Use:   "platform",
@@ -89,13 +90,16 @@ Available properties for --property:
 				}
 			} else {
 				// Print all properties
-				fmt.Printf("%+v\n", info)
+				// fmt.Printf("%+v\n", info)
+				fmt.Println(info.Format(includeNet))
 			}
 		},
 	}
 
 	// Accept multiple --property flags
 	cmd.Flags().StringSliceVar(&properties, "property", nil, "Show only specific properties (can be repeated)")
+
+	cmd.Flags().BoolVar(&includeNet, "net", false, "Include network interfaces, DNS, and gateway information")
 
 	return cmd
 }

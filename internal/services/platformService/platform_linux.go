@@ -74,3 +74,23 @@ func detectDefaultShell() string {
 		return "/bin/sh"
 	}
 }
+
+func detectDNSServers() []string {
+	data, err := os.ReadFile("/etc/resolv.conf")
+	if err != nil {
+		return nil
+	}
+
+	var servers []string
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "nameserver ") {
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				servers = append(servers, fields[1])
+			}
+		}
+	}
+
+	return servers
+}

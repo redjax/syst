@@ -4,6 +4,8 @@ go 1.24.4
 
 require (
 	github.com/briandowns/spinner v1.23.2
+	github.com/jackpal/gateway v1.1.1
+	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/klauspost/cpuid/v2 v2.2.11
 	github.com/knadh/koanf/parsers/dotenv v1.1.0
 	github.com/knadh/koanf/parsers/json v1.0.0
@@ -20,11 +22,11 @@ require (
 )
 
 require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.6.7 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
@@ -33,7 +35,12 @@ require (
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.3 // indirect
-	golang.org/x/term v0.29.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
