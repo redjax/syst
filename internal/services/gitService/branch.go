@@ -8,6 +8,15 @@ import (
 	"strings"
 )
 
+type BranchSyncStatus struct {
+	CurrentBranch  string
+	TrackingBranch string
+	Ahead          int // commits to push
+	Behind         int // commits to pull
+	HasUpstream    bool
+	Error          error
+}
+
 // GetCurrentBranch returns the name of the current Git branch.
 func GetCurrentBranch() (string, error) {
 	if !CheckGitInstalled() {
@@ -78,6 +87,38 @@ func deleteBranch(name string, force bool) error {
 	return cmd.Run()
 }
 
+func getBranchSyncStatus(branch string) (*BranchSyncStatus, error) {
+	status := &BranchSyncStatus{}
+
+	// Try to resolve upstream reference
+	upstreamRef := branch + "@{upstream}"
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", upstreamRef)
+	out, err := cmd.Output()
+	if err != nil {
+		status.HasUpstream = false
+		return status, nil // Not fatal
+	}
+
+	status.HasUpstream = true
+	status.TrackingBranch = strings.TrimSpace(string(out))
+
+	// Run git fetch to update remote refs (non-blocking)
+	exec.Command("git", "fetch").Run()
+
+	// Compare local and upstream
+	cmd = exec.Command("git", "rev-list", "--left-right", "--count", branch+"..."+status.TrackingBranch)
+	out, err = cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("could not get ahead/behind status: %w", err)
+	}
+	parts := strings.Fields(string(out))
+	if len(parts) == 2 {
+		fmt.Sscanf(parts[0], "%d", &status.Behind)
+		fmt.Sscanf(parts[1], "%d", &status.Ahead)
+	}
+	return status, nil
+}
+
 func CheckoutBranch(branch string) error {
 	if !CheckGitInstalled() {
 		fmt.Printf("Error: git is not installed")
@@ -93,4 +134,34 @@ func CheckoutBranch(branch string) error {
 	cmd := execCommand("git", "checkout", branch)
 
 	return cmd.Run()
+}
+
+func GetBranchSyncStatus() BranchSyncStatus {
+	status := BranchSyncStatus{}
+
+	// Get current branch
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	branchBytes, err := cmd.Output()
+	if err != nil {
+		status.Error = fmt.Errorf("could not determine current branch: %w", err)
+		return status
+	}
+
+	branch := strings.TrimSpace(string(branchBytes))
+	status.CurrentBranch = branch
+
+	// Call internal logic
+	internalStatus, err := getBranchSyncStatus(branch)
+	if err != nil {
+		status.Error = err
+		return status
+	}
+
+	// Merge internal status results into public one
+	status.TrackingBranch = internalStatus.TrackingBranch
+	status.HasUpstream = internalStatus.HasUpstream
+	status.Ahead = internalStatus.Ahead
+	status.Behind = internalStatus.Behind
+
+	return status
 }
