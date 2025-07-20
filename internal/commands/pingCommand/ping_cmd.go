@@ -2,7 +2,6 @@ package pingCommand
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"time"
@@ -56,18 +55,18 @@ Supports flags like count, delay between pings, and file-based logging.`,
 			}
 
 			// Print ping summary
-			fmt.Printf("\n-------------\n")
-			fmt.Println("Ping Summary:")
-			fmt.Printf("  Total:     %d\n", stats.Total)
-			fmt.Printf("  Succeeded: %d\n", stats.Successes)
-			fmt.Printf("  Failed:    %d\n", stats.Failures)
-			fmt.Printf("-------------\n")
+			// fmt.Printf("\n-------------\n")
+			// fmt.Println("Ping Summary:")
+			// fmt.Printf("  Total:     %d\n", stats.Total)
+			// fmt.Printf("  Succeeded: %d\n", stats.Successes)
+			// fmt.Printf("  Failed:    %d\n", stats.Failures)
+			// fmt.Printf("-------------\n")
 
 			// Print log file below summary
-			if opts.LogToFile && opts.LogFilePath != "" {
-				fmt.Printf("Log file saved to:\n %s\n", opts.LogFilePath)
-				fmt.Printf("-------------\n")
-			}
+			// if opts.LogToFile && opts.LogFilePath != "" {
+			// fmt.Printf("Log file saved to:\n %s\n", opts.LogFilePath)
+			// fmt.Printf("-------------\n")
+			// }
 
 			return nil
 		},
