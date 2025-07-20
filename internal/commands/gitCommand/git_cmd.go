@@ -14,6 +14,7 @@ func NewGitCommand() *cobra.Command {
 
 	// Add subcommands
 	cmd.AddCommand(NewGitPruneCommand())
+	cmd.AddCommand(NewGitSparseCloneCommand())
 
 	return cmd
 }
