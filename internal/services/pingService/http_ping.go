@@ -97,23 +97,6 @@ func defaultHTTPPing(opts *Options) error {
 	}
 
 	// Print latency summary after finishing
-	// if opts.Stats.Successes > 0 {
-	// 	avg := opts.Stats.TotalLatency / time.Duration(opts.Stats.Successes)
-
-	// 	summary := fmt.Sprintf("[STATS] Success: %d | Fail: %d | Min: %s | Max: %s | Avg: %s",
-	// 		opts.Stats.Successes,
-	// 		opts.Stats.Failures,
-	// 		opts.Stats.MinLatency,
-	// 		opts.Stats.MaxLatency,
-	// 		avg,
-	// 	)
-
-	// 	fmt.Println(summary)
-	// 	if opts.LogToFile && opts.Logger != nil {
-	// 		opts.Logger.Println(summary)
-	// 	}
-	// }
-
 	PrintPingSummaryTable(opts)
 
 	return nil
