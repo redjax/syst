@@ -13,6 +13,7 @@ import (
 func NewPlatformCmd() *cobra.Command {
 	var properties []string
 	var includeNet bool
+	var includeDisks bool
 
 	cmd := &cobra.Command{
 		Use:   "platform",
@@ -35,7 +36,7 @@ Available properties for --property:
 `,
 		Run: func(cmd *cobra.Command, args []string) {
 			// Get PlatformInfo object
-			info, err := platformservice.GatherPlatformInfo()
+			info, err := platformservice.GatherPlatformInfo(Verbose())
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
@@ -91,7 +92,7 @@ Available properties for --property:
 			} else {
 				// Print all properties
 				// fmt.Printf("%+v\n", info)
-				fmt.Println(info.Format(includeNet))
+				fmt.Println(info.PrintFormat(includeNet, includeDisks))
 			}
 		},
 	}
@@ -100,6 +101,7 @@ Available properties for --property:
 	cmd.Flags().StringSliceVar(&properties, "property", nil, "Show only specific properties (can be repeated)")
 
 	cmd.Flags().BoolVar(&includeNet, "net", false, "Include network interfaces, DNS, and gateway information")
+	cmd.Flags().BoolVar(&includeDisks, "disks", false, "Include disk information (mountpoint, filesystem, total/free space, etc).")
 
 	return cmd
 }

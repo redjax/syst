@@ -7,11 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewShowNetCmd() *cobra.Command {
+func NewDiskInfoCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "net",
-		Short: "Show only network-related platform information",
-		Long:  `Shows network interfaces, DNS servers, and gateway info from the current platform.`,
+		Use:   "disks",
+		Short: "Show disk info",
+		Long:  `Shows all disks, their mountpoint, total size, used size, and used %%`,
 		Run: func(cmd *cobra.Command, args []string) {
 			info, err := platformservice.GatherPlatformInfo(Verbose())
 			if err != nil {
@@ -19,7 +19,7 @@ func NewShowNetCmd() *cobra.Command {
 				return
 			}
 
-			fmt.Println(info.PrintNetFormat())
+			fmt.Println(info.PrintDiskFormat())
 		},
 	}
 
