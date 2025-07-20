@@ -13,6 +13,8 @@ import (
 
 // PlatformInfo holds information about the current host system.
 type PlatformInfo struct {
+	Hostname string
+
 	// e.g. "windows", "linux", "darwin"
 	OS string
 	// e.g. "amd64", "arm64"
@@ -35,7 +37,6 @@ type PlatformInfo struct {
 	CPUVendor  string
 
 	Interfaces []NetworkInterface
-	Hostname   string
 	DNSServers []string
 	GatewayIPs []string
 
@@ -56,6 +57,7 @@ func (p PlatformInfo) PrintFormat(includeNet bool, includeDisks bool) string {
 	var builder strings.Builder
 
 	builder.WriteString("Platform Information:\n")
+	builder.WriteString(fmt.Sprintf("  Hostname:      %s\n", p.Hostname))
 	builder.WriteString(fmt.Sprintf("  OS:            %s\n", p.OS))
 	builder.WriteString(fmt.Sprintf("  Architecture:  %s\n", p.Arch))
 	builder.WriteString(fmt.Sprintf("  OS Release:    %s\n", p.OSRelease))
