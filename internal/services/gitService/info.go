@@ -19,6 +19,8 @@ type RepoInfo struct {
 	SizeBytes     int64
 	IsRepo        bool
 	Remotes       []RemoteInfo
+	CommitCount   int
+	LastCommit    *CommitInfo
 }
 
 // GetRepoInfo returns metadata about the current repo.
@@ -48,6 +50,14 @@ func GetRepoInfo() (*RepoInfo, error) {
 	}
 	info.CurrentBranch = branch
 
+	// Count number of commits on current branch
+	commitCount, err := getCommitCount(branch)
+	if err != nil {
+		fmt.Printf("Warning: could not get commit count: %v\n", err)
+	} else {
+		info.CommitCount = commitCount
+	}
+
 	// Estimate size of .git directory
 	gitDir := filepath.Join(wd, ".git")
 	size, err := dirSize(gitDir)
@@ -65,9 +75,54 @@ func GetRepoInfo() (*RepoInfo, error) {
 		} else {
 			info.Remotes = remotes
 		}
+
+		lastCommit, err := getLastCommit()
+		if err != nil {
+			fmt.Printf("Warning: could not get last commit: %v\n", err)
+		} else {
+			info.LastCommit = lastCommit
+		}
 	}
 
 	return info, nil
+}
+
+func PrintRepoInfo() error {
+	info, err := GetRepoInfo()
+	if err != nil {
+		return err
+	}
+
+	// Repo Path
+	fmt.Printf("%-18s %s\n", "Repository Path:", info.Path)
+
+	// Repo Size as human readable
+	fmt.Printf("%-18s %s\n", "Repo Size:", BytesToHumanReadable(uint64(info.SizeBytes)))
+
+	if info.IsRepo {
+		fmt.Printf("%-18s %s\n", "Current Branch:", info.CurrentBranch)
+		fmt.Printf("%-18s %d\n", "Total Commits:", info.CommitCount)
+
+		if info.LastCommit != nil {
+			fmt.Println("Last Commit:")
+			fmt.Printf("  %-10s %s\n", "Hash:", info.LastCommit.Hash)
+			fmt.Printf("  %-10s %s\n", "Author:", info.LastCommit.Author)
+			fmt.Printf("  %-10s %s\n", "Date:", info.LastCommit.Date)
+		}
+
+		if len(info.Remotes) == 0 {
+			fmt.Println("Remotes:           No remotes found")
+		} else {
+			fmt.Println("Remotes:")
+			for _, remote := range info.Remotes {
+				fmt.Printf("  +%s:\n", remote.Name)
+				fmt.Printf("    %-6s %s\n", "Fetch:", remote.FetchURL)
+				fmt.Printf("    %-6s %s\n", "Push:", remote.PushURL)
+			}
+		}
+	}
+
+	return nil
 }
 
 // dirSize recursively calculates the size of a directory in bytes.
