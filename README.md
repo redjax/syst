@@ -41,7 +41,7 @@ You can download & install `syst` on Linux & Mac using [the `install-syst.sh` sc
 To download & install in 1 command, do:
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.sh | sh
+curl -LsSf https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.sh | bash -s -- --auto
 ```
 
 ### From Release
