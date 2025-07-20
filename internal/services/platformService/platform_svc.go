@@ -2,34 +2,14 @@ package platformservice
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/user"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/jackpal/gateway"
 	"github.com/klauspost/cpuid/v2"
-	"github.com/shirou/gopsutil/v4/disk"
 )
-
-type NetworkInterface struct {
-	Name            string
-	HardwareAddress string
-	Flags           []string
-	IPAddresses     []string
-}
-
-type DiskInfo struct {
-	MountPoint  string
-	FSType      string
-	Total       uint64
-	Used        uint64
-	Free        uint64
-	UsedPercent float64
-	Label       string
-}
 
 // PlatformInfo holds information about the current host system.
 type PlatformInfo struct {
@@ -70,41 +50,6 @@ type PlatformUser struct {
 	HomeDir  string
 }
 
-// Add a printstring method to the PlatformInfo class.
-// Controls how the class displays when printed directly. Like Python's __repr__.
-// func (p PlatformInfo) String() string {
-// 	return fmt.Sprintf(
-// 		`Platform Information:
-//   OS:            %s
-//   Architecture:  %s
-//   OS Release:    %s
-//   User:          %s (%s)
-//   Default Shell: %s
-//   Home Dir:      %s
-//   Uptime:        %s
-//   Total RAM:     %.2f GB
-//   CPU Cores:     %d
-//   CPU Threads:   %d
-//   CPU Sockets:   %d
-//   CPU Model:     %s
-//   CPU Vendor:    %s`,
-// 		p.OS,
-// 		p.Arch,
-// 		p.OSRelease,
-// 		p.CurrentUser.Name,
-// 		p.CurrentUser.Username,
-// 		p.DefaultShell,
-// 		p.UserHomeDir,
-// 		p.Uptime.String(),
-// 		float64(p.TotalRAM)/(1024*1024*1024),
-// 		p.CPUCores,
-// 		p.CPUThreads,
-// 		p.CPUSockets,
-// 		p.CPUModel,
-// 		p.CPUVendor,
-// 	)
-// }
-
 func (p PlatformInfo) PrintFormat(includeNet bool, includeDisks bool) string {
 	var builder strings.Builder
 
@@ -132,49 +77,6 @@ func (p PlatformInfo) PrintFormat(includeNet bool, includeDisks bool) string {
 	}
 
 	return builder.String()
-}
-
-func (p PlatformInfo) PrintNetFormat() string {
-	var builder strings.Builder
-
-	builder.WriteString("Network Information:\n")
-
-	builder.WriteString("  +Network Interfaces:\n")
-	for _, iface := range p.Interfaces {
-		builder.WriteString(fmt.Sprintf("    - %s (%s)\n", iface.Name, iface.HardwareAddress))
-		if len(iface.Flags) > 0 {
-			builder.WriteString(fmt.Sprintf("      Flags: %s\n", strings.Join(iface.Flags, ", ")))
-		}
-		if len(iface.IPAddresses) > 0 {
-			builder.WriteString(fmt.Sprintf("      IPs:   %s\n", strings.Join(iface.IPAddresses, ", ")))
-		}
-		builder.WriteString("\n")
-	}
-
-	if len(p.DNSServers) > 0 {
-		builder.WriteString(fmt.Sprintf("  +DNS Servers:      %s\n", strings.Join(p.DNSServers, ", ")))
-	}
-
-	if len(p.GatewayIPs) > 0 {
-		builder.WriteString(fmt.Sprintf("  +Default Gateways: %s\n", strings.Join(p.GatewayIPs, ", ")))
-	}
-
-	return builder.String()
-}
-
-func (p PlatformInfo) PrintDiskFormat() string {
-	var b strings.Builder
-	b.WriteString("Disk Information:\n")
-
-	for _, d := range p.Disks {
-		b.WriteString(fmt.Sprintf("  - Mount: %s\n", d.MountPoint))
-		b.WriteString(fmt.Sprintf("    Type:  %s\n", d.FSType))
-		b.WriteString(fmt.Sprintf("    Total: %.2f GB\n", float64(d.Total)/(1024*1024*1024)))
-		b.WriteString(fmt.Sprintf("    Used:  %.2f GB (%.1f%%)\n", float64(d.Used)/(1024*1024*1024), d.UsedPercent))
-		b.WriteString(fmt.Sprintf("    Free:  %.2f GB\n\n", float64(d.Free)/(1024*1024*1024)))
-	}
-
-	return b.String()
 }
 
 // GatherPlatformInfo collects platform information in a cross-platform way.
@@ -236,108 +138,4 @@ func GatherPlatformInfo(verbose bool) (*PlatformInfo, error) {
 	pi.Disks = detectDisks(verbose)
 
 	return pi, nil
-}
-
-// detectNetworkInterfaces gathers network interface details.
-func detectNetworkInterfaces() []NetworkInterface {
-	var result []NetworkInterface
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return result
-	}
-
-	for _, iface := range ifaces {
-		ni := NetworkInterface{
-			Name:            iface.Name,
-			HardwareAddress: iface.HardwareAddr.String(),
-		}
-
-		// Add flags (e.g. up, loopback)
-		for _, f := range []net.Flags{
-			net.FlagUp, net.FlagLoopback, net.FlagBroadcast,
-			net.FlagMulticast, net.FlagPointToPoint,
-		} {
-			if iface.Flags&f != 0 {
-				ni.Flags = append(ni.Flags, f.String())
-			}
-		}
-
-		addrs, err := iface.Addrs()
-		if err == nil {
-			for _, addr := range addrs {
-				ni.IPAddresses = append(ni.IPAddresses, addr.String())
-			}
-		}
-
-		result = append(result, ni)
-	}
-
-	return result
-}
-
-func detectDefaultGateways() []string {
-	var gateways []string
-	gw, err := gateway.DiscoverGateway()
-
-	if err == nil && gw != nil && !gw.Equal(net.IPv4zero) {
-		gateways = append(gateways, gw.String())
-	}
-
-	return gateways
-}
-
-func detectDisks(verbose bool) []DiskInfo {
-	var result []DiskInfo
-
-	// System/dynamic/ignored FS types (non-verbose)
-	ignoreFSTypes := map[string]bool{
-		"autofs": true, "binfmt_misc": true, "cgroup": true, "cgroup2": true,
-		"debugfs": true, "devpts": true, "devtmpfs": true, "efivarfs": true,
-		"fusectl": true, "mqueue": true, "proc": true, "pstore": true,
-		"securityfs": true, "sysfs": true, "tmpfs": true, "overlay": true,
-		"tracefs": true, "nsfs": true, "ramfs": true, "squashfs": true,
-		"aufs": true, "snap": true,
-	}
-
-	partitions, err := disk.Partitions(true)
-
-	if err != nil {
-		return result
-	}
-
-	for _, part := range partitions {
-		if !verbose {
-			if ignoreFSTypes[part.Fstype] {
-				continue
-			}
-
-			// Fallback: skip pseudo mountpoints
-			if strings.HasPrefix(part.Mountpoint, "/snap") ||
-				strings.HasPrefix(part.Mountpoint, "/boot/efi") ||
-				strings.HasPrefix(part.Mountpoint, "/var/lib/docker") ||
-				strings.HasPrefix(part.Mountpoint, "/dev/") ||
-				strings.HasPrefix(part.Mountpoint, "/proc") ||
-				strings.HasPrefix(part.Mountpoint, "/sys") {
-				continue
-			}
-		}
-
-		usage, err := disk.Usage(part.Mountpoint)
-		if err != nil {
-			continue
-		}
-
-		result = append(result, DiskInfo{
-			MountPoint:  part.Mountpoint,
-			FSType:      part.Fstype,
-			Total:       usage.Total,
-			Used:        usage.Used,
-			Free:        usage.Free,
-			UsedPercent: usage.UsedPercent,
-			Label:       "", // optional
-		})
-	}
-
-	return result
 }
