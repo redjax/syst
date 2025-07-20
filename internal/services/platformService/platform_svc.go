@@ -2,14 +2,12 @@ package platformservice
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"os/user"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/jackpal/gateway"
 	"github.com/klauspost/cpuid/v2"
 )
 
@@ -140,53 +138,4 @@ func GatherPlatformInfo(verbose bool) (*PlatformInfo, error) {
 	pi.Disks = detectDisks(verbose)
 
 	return pi, nil
-}
-
-// detectNetworkInterfaces gathers network interface details.
-func detectNetworkInterfaces() []NetworkInterface {
-	var result []NetworkInterface
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return result
-	}
-
-	for _, iface := range ifaces {
-		ni := NetworkInterface{
-			Name:            iface.Name,
-			HardwareAddress: iface.HardwareAddr.String(),
-		}
-
-		// Add flags (e.g. up, loopback)
-		for _, f := range []net.Flags{
-			net.FlagUp, net.FlagLoopback, net.FlagBroadcast,
-			net.FlagMulticast, net.FlagPointToPoint,
-		} {
-			if iface.Flags&f != 0 {
-				ni.Flags = append(ni.Flags, f.String())
-			}
-		}
-
-		addrs, err := iface.Addrs()
-		if err == nil {
-			for _, addr := range addrs {
-				ni.IPAddresses = append(ni.IPAddresses, addr.String())
-			}
-		}
-
-		result = append(result, ni)
-	}
-
-	return result
-}
-
-func detectDefaultGateways() []string {
-	var gateways []string
-	gw, err := gateway.DiscoverGateway()
-
-	if err == nil && gw != nil && !gw.Equal(net.IPv4zero) {
-		gateways = append(gateways, gw.String())
-	}
-
-	return gateways
 }
