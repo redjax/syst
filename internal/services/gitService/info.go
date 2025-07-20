@@ -21,6 +21,7 @@ type RepoInfo struct {
 	Remotes       []RemoteInfo
 	CommitCount   int
 	LastCommit    *CommitInfo
+	SyncStatus    *BranchSyncStatus
 }
 
 // GetRepoInfo returns metadata about the current repo.
@@ -84,6 +85,13 @@ func GetRepoInfo() (*RepoInfo, error) {
 		}
 	}
 
+	syncStatus, err := getBranchSyncStatus(branch)
+	if err != nil {
+		fmt.Printf("Warning: failed to detect sync status: %v\n", err)
+	} else {
+		info.SyncStatus = syncStatus
+	}
+
 	return info, nil
 }
 
@@ -100,6 +108,32 @@ func PrintRepoInfo() error {
 	fmt.Printf("%-18s %s\n", "Repo Size:", BytesToHumanReadable(uint64(info.SizeBytes)))
 
 	if info.IsRepo {
+
+		if info.SyncStatus != nil {
+			fmt.Println("Sync Status:")
+
+			if info.SyncStatus.Error != nil {
+				fmt.Printf("  Error: %v\n", info.SyncStatus.Error)
+			}
+
+			if !info.SyncStatus.HasUpstream {
+				fmt.Println("  This branch does not track a remote branch.")
+			}
+
+			fmt.Printf("  %-16s %s\n", "Current Branch:", info.SyncStatus.CurrentBranch)
+			fmt.Printf("  %-16s %s\n", "Tracking Branch:", info.SyncStatus.TrackingBranch)
+			fmt.Printf("  %-16s %d\n", "Ahead (local):", info.SyncStatus.Ahead)
+			fmt.Printf("  %-16s %d\n", "Behind (remote):", info.SyncStatus.Behind)
+
+			// Optional visual hints
+			if info.SyncStatus.Ahead > 0 {
+				fmt.Println("  ➤ You have commits to push.")
+			}
+			if info.SyncStatus.Behind > 0 {
+				fmt.Println("  ⬇ You are behind the remote.")
+			}
+		}
+
 		fmt.Printf("%-18s %s\n", "Current Branch:", info.CurrentBranch)
 		fmt.Printf("%-18s %d\n", "Total Commits:", info.CommitCount)
 
