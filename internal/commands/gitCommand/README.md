@@ -1,6 +1,14 @@
-# Git
+# Git <!-- omit in toc -->
 
 Portable git operations, like pruning local branches that have been deleted from the remote, or automating sparse checkouts.
+
+## Table of Contents <!-- omit in toc -->
+
+- [Usage](#usage)
+- [Subcommands](#subcommands)
+  - [info](#info)
+  - [prune](#prune)
+  - [sparse-clone](#sparse-clone)
 
 ## Usage
 
@@ -37,11 +45,17 @@ Clone a git repo with sparse checkout in one step.
 
 A sparse checkout is usually done with the following steps (or something similar):
 
-* `git clone --no-checkout https://remote.com/user/repo.git path/on/localhost`
-* `cd path/on/localhost`
-* `git sparse-checkout init --cone`
-* `git sparse-checkout set path/to/checkout path2/to/checkout ...`
-* `git checkout <branch-name>`
+```shell
+git clone --no-checkout https://remote.com/user/repo.git path/on/localhost
+
+cd path/on/localhost
+
+git sparse-checkout init --cone
+
+git sparse-checkout set path/to/checkout path2/to/checkout ...
+
+git checkout <branch-name>
+```
 
 Whether this command actually simplifies anything or not, it at least "chains" the commands together to avoid some user error.
 
