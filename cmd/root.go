@@ -14,6 +14,7 @@ import (
 	selfcommand "github.com/redjax/syst/internal/commands/selfCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
+	_which "github.com/redjax/syst/internal/commands/whichCommand"
 	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
 	"github.com/redjax/syst/internal/version"
 
@@ -70,6 +71,7 @@ func init() {
 	rootCmd.AddCommand(pingo.NewPingCommand())
 	rootCmd.AddCommand(strutilcommand.NewStrUtilCommand())
 	rootCmd.AddCommand(selfcommand.NewSelfCommand())
+	rootCmd.AddCommand(_which.NewWhichCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
