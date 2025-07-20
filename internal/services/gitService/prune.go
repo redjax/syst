@@ -13,12 +13,14 @@ import (
 // PruneBranches deletes local branches that were deleted on the remote.
 // If --confirm is passed, prompt before each deletion.
 func PruneBranches(mainBranch string, confirm bool, force bool, dryRun bool) error {
+	// Ensure git is installed
 	path, err := capabilities.Which("git")
 	if err != nil || path == "" {
 		fmt.Println("ERROR: git is not installed or not found in PATH.")
 		return fmt.Errorf("git not found")
 	}
 
+	// Detect current branch
 	currentBranchCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	currentBranchOut, err := currentBranchCmd.Output()
 	if err != nil {
@@ -67,18 +69,21 @@ func PruneBranches(mainBranch string, confirm bool, force bool, dryRun bool) err
 		}
 	}()
 
+	// Checkout the configured main branch
 	cmd := exec.Command("git", "checkout", mainBranch)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("could not checkout branch %s: %w", mainBranch, err)
 	}
 
+	// Prune tracking data for remotes
 	cmd = exec.Command("git", "remote", "update", "origin", "--prune")
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("could not prune remote branches: %w", err)
 	}
 
+	// List branches with tracking info, detect "[gone]" ones
 	out, err := exec.Command("git", "branch", "-vv").Output()
 	if err != nil {
 		return fmt.Errorf("could not list local branches: %w", err)
@@ -95,13 +100,13 @@ func PruneBranches(mainBranch string, confirm bool, force bool, dryRun bool) err
 	}
 
 	if len(branchesToDelete) == 0 {
-		return nil // No branches to delete; defer will still restore branch and print "none deleted"
+		return nil // Nothing to delete; defer block will still print
 	}
 
-	deleted = branchesToDelete
-
+	// For --dry-run, just simulate list
 	if dryRun {
-		return nil // Skip deletion, defer block will handle printing
+		deleted = branchesToDelete
+		return nil
 	}
 
 	reader := bufio.NewReader(os.Stdin)
