@@ -19,6 +19,7 @@ Run syst show --help to see all options.
 	// Attach subcommands
 	showCmd.AddCommand(NewPlatformCmd())
 	showCmd.AddCommand(NewConstantsCmd())
+	showCmd.AddCommand(NewShowNetCmd())
 
 	return showCmd
 }
