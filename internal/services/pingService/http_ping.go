@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/redjax/syst/internal/utils/spinner"
 )
 
 func defaultHTTPPing(opts *Options) error {
@@ -18,6 +20,10 @@ func defaultHTTPPing(opts *Options) error {
 	}
 
 	i := 1
+
+	// Prepare & defer spinner
+	stopSpinner := spinner.StartSpinner("")
+	defer stopSpinner()
 
 	for opts.Count == 0 || i <= opts.Count {
 		select {
@@ -38,9 +44,15 @@ func defaultHTTPPing(opts *Options) error {
 		var msg string
 
 		if err != nil {
+			// STOP spinner temporarily before printing result
+			stopSpinner() // stop & clear spinner
+
 			msg = fmt.Sprintf("[FAILURE] Request to %s failed to build: %v (#%d)", url, err, i)
 
 			fmt.Println(msg)
+
+			// RESTART spinner
+			stopSpinner = spinner.StartSpinner("")
 
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
@@ -52,8 +64,14 @@ func defaultHTTPPing(opts *Options) error {
 			resp, err := client.Do(req)
 
 			if err != nil {
+				// STOP spinner temporarily before printing result
+				stopSpinner() // stop & clear spinner
+
 				msg = fmt.Sprintf("[%s] HTTP HEAD request to %s failed: %v (#%d)", resp.Status, url, err, i)
 				fmt.Println(msg)
+
+				// RESTART spinner
+				stopSpinner = spinner.StartSpinner("")
 
 				if opts.LogToFile && opts.Logger != nil {
 					opts.Logger.Println(msg)
@@ -63,10 +81,16 @@ func defaultHTTPPing(opts *Options) error {
 			} else {
 				latency := time.Since(start)
 
+				// STOP spinner temporarily before printing result
+				stopSpinner() // stop & clear spinner
+
 				msg = fmt.Sprintf("[%s] HTTP HEAD to %s in %s (#%d)",
 					resp.Status, url, latency, i)
 
 				fmt.Println(msg)
+
+				// RESTART spinner
+				stopSpinner = spinner.StartSpinner("")
 
 				if opts.LogToFile && opts.Logger != nil {
 					opts.Logger.Println(msg)
@@ -95,6 +119,8 @@ func defaultHTTPPing(opts *Options) error {
 
 		time.Sleep(opts.Sleep)
 	}
+
+	stopSpinner() // Stop the spinner
 
 	// Print latency summary after finishing
 	PrettyPrintPingSummaryTable(opts)

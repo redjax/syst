@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/redjax/syst/internal/utils/spinner"
 )
 
 func runICMPPing(opts *Options) error {
@@ -15,6 +17,10 @@ func runICMPPing(opts *Options) error {
 	}
 
 	i := 1
+
+	// Prepare & defer spinner
+	stopSpinner := spinner.StartSpinner("")
+	defer stopSpinner()
 
 	for opts.Count == 0 || i <= opts.Count {
 		select {
@@ -37,9 +43,15 @@ func runICMPPing(opts *Options) error {
 		opts.Stats.Total++
 
 		if err != nil || !strings.Contains(string(output), "bytes from") {
+			// STOP spinner temporarily before printing result
+			stopSpinner() // stop & clear spinner
+
 			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v (#%d)", opts.Target, err, i)
 
 			fmt.Println(msg)
+
+			// RESTART spinner
+			stopSpinner = spinner.StartSpinner("")
 
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
@@ -47,9 +59,15 @@ func runICMPPing(opts *Options) error {
 
 			opts.Stats.Failures++
 		} else {
+			// STOP spinner temporarily before printing result
+			stopSpinner() // stop & clear spinner
+
 			msg := fmt.Sprintf("[OK] Ping to %s succeeded in %s (#%d)", opts.Target, latency, i)
 
 			fmt.Println(msg)
+
+			// RESTART spinner
+			stopSpinner = spinner.StartSpinner("")
 
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
@@ -79,6 +97,9 @@ func runICMPPing(opts *Options) error {
 	if opts.LogToFile && opts.Logger != nil {
 		opts.Logger.Printf("[INFO] Finished ping to %s", opts.Target)
 	}
+
+	// Stop spinner
+	stopSpinner()
 
 	// Print stats summary at the end
 	PrettyPrintPingSummaryTable(opts)
