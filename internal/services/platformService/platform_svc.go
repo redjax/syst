@@ -40,6 +40,8 @@ type PlatformInfo struct {
 	GatewayIPs []string
 
 	Disks []DiskInfo
+
+	Time TimeInfo
 }
 
 type PlatformUser struct {
@@ -67,6 +69,10 @@ func (p PlatformInfo) PrintFormat(includeNet bool, includeDisks bool) string {
 	builder.WriteString(fmt.Sprintf("  CPU Sockets:   %d\n", p.CPUSockets))
 	builder.WriteString(fmt.Sprintf("  CPU Model:     %s\n", p.CPUModel))
 	builder.WriteString(fmt.Sprintf("  CPU Vendor:    %s\n", p.CPUVendor))
+	builder.WriteString("  Time Info:\n")
+	builder.WriteString(fmt.Sprintf("    Current Time: %s\n", p.Time.CurrentTime))
+	builder.WriteString(fmt.Sprintf("    Timezone: %s (%s)\n", p.Time.TimezoneLong, p.Time.Timezone))
+	builder.WriteString(fmt.Sprintf("    Offset: %vs\n", p.Time.OffsetSeconds))
 
 	if includeNet {
 		builder.WriteString("\n" + p.PrintNetFormat())
@@ -96,6 +102,9 @@ func GatherPlatformInfo(verbose bool) (*PlatformInfo, error) {
 	if u, err := user.Current(); err == nil {
 		pi.UserHomeDir = u.HomeDir
 	}
+
+	// Get time info
+	pi.Time = getTimeInfo()
 
 	// Get default shell (best effort, platform-specific)
 	pi.DefaultShell = detectDefaultShell()
