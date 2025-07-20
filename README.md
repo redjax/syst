@@ -25,6 +25,7 @@
 ## Table of Contents <!-- omit in toc -->
 
 - [Install](#install)
+  - [Install script](#install-script)
   - [From Release](#from-release)
   - [Build Locally](#build-locally)
 - [Upgrading](#upgrading)
@@ -32,6 +33,16 @@
   - [Commands](#commands)
 
 ## Install
+
+### Install script
+
+You can download & install `syst` on Linux & Mac using [the `install-syst.sh` script](./scripts/install-syst.sh).
+
+To download & install in 1 command, do:
+
+```bash
+curl -LsSf https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.sh | sh
+```
 
 ### From Release
 
