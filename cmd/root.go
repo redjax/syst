@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	// Import your CLI subcommands
+	_git "github.com/redjax/syst/internal/commands/gitCommand"
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	selfcommand "github.com/redjax/syst/internal/commands/selfCommand"
@@ -72,6 +73,7 @@ func init() {
 	rootCmd.AddCommand(strutilcommand.NewStrUtilCommand())
 	rootCmd.AddCommand(selfcommand.NewSelfCommand())
 	rootCmd.AddCommand(_which.NewWhichCommand())
+	rootCmd.AddCommand(_git.NewGitCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
