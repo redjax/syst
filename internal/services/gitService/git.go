@@ -3,6 +3,7 @@ package gitservice
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -40,10 +41,25 @@ func IsGitRepo() (bool, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return false, ErrorNotAGitRepo
+		return false, ErrNotGitRepo
 	}
 
 	result := strings.TrimSpace(string(output))
 
 	return result == "true", nil
+}
+
+func CheckGitInstalled() bool {
+	_, err := capabilities.Which("git")
+	return err == nil
+}
+
+// execCommand allows mocking for tests later if needed
+var execCommand = func(name string, args ...string) *exec.Cmd {
+	cmd := exec.Command(name, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd
 }

@@ -10,16 +10,16 @@ import (
 
 // GetCurrentBranch returns the name of the current Git branch.
 func GetCurrentBranch() (string, error) {
-	ok, err := IsGitRepo()
-	if errors.Is(err, ErrorNotAGitRepo) || !ok {
-		return "", ErrorNotAGitRepo
+	if !CheckGitInstalled() {
+		fmt.Printf("Error: git is not installed")
+		return "", ErrGitNotInstalled
 	}
 
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-
 	out, err := cmd.Output()
+
 	if err != nil {
-		return "", fmt.Errorf("could not detect current branch: %w", err)
+		return "", fmt.Errorf("could not determine current branch: %w", err)
 	}
 
 	return strings.TrimSpace(string(out)), nil
@@ -27,11 +27,6 @@ func GetCurrentBranch() (string, error) {
 
 // Git checkout a branch
 func checkoutBranch(branch string) error {
-	ok, err := IsGitRepo()
-	if errors.Is(err, ErrorNotAGitRepo) || !ok {
-		return ErrorNotAGitRepo
-	}
-
 	if branch == "" {
 		return nil
 	}
@@ -49,11 +44,6 @@ func checkoutBranch(branch string) error {
 }
 
 func getBranchesToDelete(mainBranch, currentBranch string) ([]string, error) {
-	ok, err := IsGitRepo()
-	if errors.Is(err, ErrorNotAGitRepo) || !ok {
-		return nil, ErrorNotAGitRepo
-	}
-
 	out, err := exec.Command("git", "branch", "-vv").Output()
 	if err != nil {
 		return nil, fmt.Errorf("could not list local branches: %w", err)
@@ -74,11 +64,6 @@ func getBranchesToDelete(mainBranch, currentBranch string) ([]string, error) {
 }
 
 func deleteBranch(name string, force bool) error {
-	ok, err := IsGitRepo()
-	if errors.Is(err, ErrorNotAGitRepo) || !ok {
-		return ErrorNotAGitRepo
-	}
-
 	args := []string{"branch"}
 
 	if force {
@@ -89,6 +74,23 @@ func deleteBranch(name string, force bool) error {
 
 	cmd := exec.Command("git", args...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+
+	return cmd.Run()
+}
+
+func CheckoutBranch(branch string) error {
+	if !CheckGitInstalled() {
+		fmt.Printf("Error: git is not installed")
+		return ErrGitNotInstalled
+	}
+
+	ok, err := IsGitRepo()
+
+	if errors.Is(err, ErrNotGitRepo) || !ok {
+		return ErrNotGitRepo
+	}
+
+	cmd := execCommand("git", "checkout", branch)
 
 	return cmd.Run()
 }

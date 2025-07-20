@@ -11,12 +11,13 @@ import (
 // If --confirm is passed, prompt before each deletion.
 func PruneBranches(mainBranch string, confirm bool, force bool, dryRun bool) error {
 	ok, err := IsGitRepo()
-	if errors.Is(err, ErrorNotAGitRepo) || !ok {
-		return ErrorNotAGitRepo
+	if errors.Is(err, ErrNotGitRepo) || !ok {
+		return ErrNotGitRepo
 	}
 
-	if err := ensureGitInstalled(); err != nil {
-		return err
+	if !CheckGitInstalled() {
+		fmt.Printf("Error: git is not installed")
+		return ErrGitNotInstalled
 	}
 
 	currentBranch, err := GetCurrentBranch()
