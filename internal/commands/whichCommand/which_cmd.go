@@ -9,10 +9,11 @@ import (
 
 func NewWhichCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "which [binary]",
-		Short: "A cross-platform wrapper that functions like UNIX 'which'.",
-		Long:  `Test a CLI command to see if it's installed/available, and if so return the path.`,
-		Args:  cobra.MinimumNArgs(1), // Require at least one argument
+		Use:     "which [binary]",
+		Aliases: []string{"where"},
+		Short:   "A cross-platform wrapper that functions like UNIX 'which'.",
+		Long:    `Test a CLI command to see if it's installed/available, and if so return the path.`,
+		Args:    cobra.MinimumNArgs(1), // Require at least one argument
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bin := args[0] // Get the first argument
 
