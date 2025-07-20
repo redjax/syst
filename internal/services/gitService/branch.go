@@ -1,6 +1,7 @@
 package gitservice
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,11 @@ import (
 
 // GetCurrentBranch returns the name of the current Git branch.
 func GetCurrentBranch() (string, error) {
+	ok, err := IsGitRepo()
+	if errors.Is(err, ErrorNotAGitRepo) || !ok {
+		return "", ErrorNotAGitRepo
+	}
+
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 
 	out, err := cmd.Output()
@@ -21,6 +27,11 @@ func GetCurrentBranch() (string, error) {
 
 // Git checkout a branch
 func checkoutBranch(branch string) error {
+	ok, err := IsGitRepo()
+	if errors.Is(err, ErrorNotAGitRepo) || !ok {
+		return ErrorNotAGitRepo
+	}
+
 	if branch == "" {
 		return nil
 	}
@@ -38,6 +49,11 @@ func checkoutBranch(branch string) error {
 }
 
 func getBranchesToDelete(mainBranch, currentBranch string) ([]string, error) {
+	ok, err := IsGitRepo()
+	if errors.Is(err, ErrorNotAGitRepo) || !ok {
+		return nil, ErrorNotAGitRepo
+	}
+
 	out, err := exec.Command("git", "branch", "-vv").Output()
 	if err != nil {
 		return nil, fmt.Errorf("could not list local branches: %w", err)
@@ -58,6 +74,11 @@ func getBranchesToDelete(mainBranch, currentBranch string) ([]string, error) {
 }
 
 func deleteBranch(name string, force bool) error {
+	ok, err := IsGitRepo()
+	if errors.Is(err, ErrorNotAGitRepo) || !ok {
+		return ErrorNotAGitRepo
+	}
+
 	args := []string{"branch"}
 
 	if force {

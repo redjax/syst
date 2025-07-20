@@ -2,6 +2,7 @@ package gitservice
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -9,6 +10,11 @@ import (
 // PruneBranches deletes local branches that were deleted on the remote.
 // If --confirm is passed, prompt before each deletion.
 func PruneBranches(mainBranch string, confirm bool, force bool, dryRun bool) error {
+	ok, err := IsGitRepo()
+	if errors.Is(err, ErrorNotAGitRepo) || !ok {
+		return ErrorNotAGitRepo
+	}
+
 	if err := ensureGitInstalled(); err != nil {
 		return err
 	}
