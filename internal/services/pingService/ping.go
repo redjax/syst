@@ -27,6 +27,14 @@ type PingStats struct {
 	Successes int
 	Failures  int
 	Total     int
+
+	// Hold stats about each successful ping's latency
+	Latencies []time.Duration
+	// Sum of all latencies for calculating average
+	TotalLatency time.Duration
+	// Best/worst latency
+	MinLatency time.Duration
+	MaxLatency time.Duration
 }
 
 func RunPing(opts *Options) error {

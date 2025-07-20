@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/redjax/syst/internal/utils/spinner"
 )
 
 func runICMPPing(opts *Options) error {
@@ -14,8 +16,13 @@ func runICMPPing(opts *Options) error {
 		opts.Logger.Printf("[INFO] Starting ICMP ping to %s", opts.Target)
 	}
 
-	i := 0
-	for opts.Count == 0 || i < opts.Count {
+	i := 1
+
+	// Prepare & defer spinner
+	stopSpinner := spinner.StartSpinner("")
+	defer stopSpinner()
+
+	for opts.Count == 0 || i <= opts.Count {
 		select {
 		case <-opts.Ctx.Done():
 			msg := "\n[!] Interrupt received, stopping ICMP ping"
@@ -27,15 +34,25 @@ func runICMPPing(opts *Options) error {
 		default:
 		}
 
+		start := time.Now() // record start time
+
 		cmd := exec.Command("ping", "-c", "1", opts.Target)
 		output, err := cmd.CombinedOutput()
+
+		latency := time.Since(start) // record duration
 
 		opts.Stats.Total++
 
 		if err != nil || !strings.Contains(string(output), "bytes from") {
-			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v", opts.Target, err)
+			// STOP spinner temporarily before printing result
+			stopSpinner() // stop & clear spinner
+
+			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v (#%d)", opts.Target, err, i)
 
 			fmt.Println(msg)
+
+			// RESTART spinner
+			stopSpinner = spinner.StartSpinner("")
 
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
@@ -43,19 +60,38 @@ func runICMPPing(opts *Options) error {
 
 			opts.Stats.Failures++
 		} else {
-			msg := fmt.Sprintf("[OK] Ping to %s succeeded", opts.Target)
+			// STOP spinner temporarily before printing result ↓↓↓
+			stopSpinner() // stop & clear spinner
+
+			msg := fmt.Sprintf("[OK] Ping to %s succeeded in %s (#%d)", opts.Target, latency, i)
 
 			fmt.Println(msg)
+
+			// RESTART spinner
+			stopSpinner = spinner.StartSpinner("")
 
 			if opts.LogToFile && opts.Logger != nil {
 				opts.Logger.Println(msg)
 			}
 
 			opts.Stats.Successes++
+
+			// Latency tracking, only on success:
+			opts.Stats.Latencies = append(opts.Stats.Latencies, latency)
+
+			opts.Stats.TotalLatency += latency
+
+			if opts.Stats.MinLatency == 0 || latency < opts.Stats.MinLatency {
+				opts.Stats.MinLatency = latency
+			}
+
+			if latency > opts.Stats.MaxLatency {
+				opts.Stats.MaxLatency = latency
+			}
 		}
 
 		i++
-		if opts.Count != 0 && i >= opts.Count {
+		if opts.Count != 0 && i > opts.Count {
 			break
 		}
 
@@ -65,6 +101,12 @@ func runICMPPing(opts *Options) error {
 	if opts.LogToFile && opts.Logger != nil {
 		opts.Logger.Printf("[INFO] Finished ping to %s", opts.Target)
 	}
+
+	// Stop the spinner
+	stopSpinner()
+
+	// Print stats summary at the end
+	PrettyPrintPingSummaryTable(opts)
 
 	return nil
 }

@@ -27,5 +27,8 @@ func StartSpinner(message string) func() {
 		s.Stop()
 		// Optionally, print a newline or a "Done!" message.
 		// fmt.Println("Done!")
+
+		// Clear spinner line
+		print("\r\033[K")
 	}
 }
