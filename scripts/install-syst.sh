@@ -1,8 +1,8 @@
-#!/bin/bash
-
 #!/usr/bin/env bash
 
 set -e
+
+AUTO_MODE=false
 
 if ! command -v curl &>/dev/null; then
   echo "curl is not installed."
@@ -12,6 +12,26 @@ fi
 if ! command -v unzip &>/dev/null; then
   echo "unzip is not installed."
   exit 1
+fi
+
+## Parse arguments
+for arg in "$@"; do
+  if [[ "$arg" == "--auto" ]]; then
+    AUTO_MODE=true
+  fi
+done
+
+if command -v syst &>/dev/null; then
+  if [[ "$AUTO_MODE" == true ]]; then
+    CONFIRM="y"
+  else
+    read -p "syst is already installed. Download anyway? (y/N) " CONFIRM
+  fi
+
+  if [[ "$CONFIRM" != "y" ]]; then
+    echo "Aborting."
+    exit 0
+  fi
 fi
 
 ## Detect OS
@@ -31,15 +51,6 @@ fi
 SYST_VERSION=$(curl -s https://api.github.com/repos/redjax/syst/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
 ## Remove leading 'v' if present (e.g., 'v${SYST_VERSION}' -> '${SYST_VERSION}')
 SYST_VERSION="${SYST_VERSION#v}"
-
-if command -v syst &>/dev/null; then
-  read -p "syst is already installed. Download anyway? (y/N) " CONFIRM
-
-  if [[ $CONFIRM != "y" ]]; then
-    echo "Aborting."
-    exit 0
-  fi
-fi
 
 echo "Installing syst v${SYST_VERSION}"
 
