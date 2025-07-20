@@ -115,7 +115,7 @@ func PrintRepoInfo() error {
 		} else {
 			fmt.Println("Remotes:")
 			for _, remote := range info.Remotes {
-				fmt.Printf("  +%s:\n", remote.Name)
+				fmt.Printf("  %s:\n", remote.Name)
 				fmt.Printf("    %-6s %s\n", "Fetch:", remote.FetchURL)
 				fmt.Printf("    %-6s %s\n", "Push:", remote.PushURL)
 			}
