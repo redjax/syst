@@ -81,7 +81,7 @@ func runICMPPing(opts *Options) error {
 	}
 
 	// Print stats summary at the end
-	PrintPingSummaryTable(opts)
+	PrettyPrintPingSummaryTable(opts)
 
 	return nil
 }

@@ -5,6 +5,9 @@ import (
 	"os"
 	"text/tabwriter"
 	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 // Prints log stats as a simple newline
@@ -78,6 +81,46 @@ func PrintPingSummaryTable(opts *Options) {
 		}
 	}
 
+	if opts.LogToFile && opts.LogFilePath != "" {
+		fmt.Printf("\nLog file saved to:\n%s\n", opts.LogFilePath)
+	}
+}
+
+func PrettyPrintPingSummaryTable(opts *Options) {
+	if opts.Stats == nil {
+		return
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetStyle(table.StyleLight) // Optional: Elegant but minimal
+	t.Style().Format.Header = text.FormatTitle
+
+	t.AppendHeader(table.Row{"Statistic", "Value"})
+
+	t.AppendRow(table.Row{"Target", opts.Target})
+	t.AppendRow(table.Row{"Protocol", protocolLabel(opts)})
+	t.AppendRow(table.Row{"Total Pings", opts.Stats.Total})
+	t.AppendRow(table.Row{"Successes", opts.Stats.Successes})
+	t.AppendRow(table.Row{"Failures", opts.Stats.Failures})
+
+	if opts.Stats.Successes > 0 {
+		avg := opts.Stats.TotalLatency / time.Duration(opts.Stats.Successes)
+		t.AppendRow(table.Row{"Min Latency", opts.Stats.MinLatency})
+		t.AppendRow(table.Row{"Max Latency", opts.Stats.MaxLatency})
+		t.AppendRow(table.Row{"Avg Latency", avg})
+	} else {
+		t.AppendRow(table.Row{"Min Latency", "n/a"})
+		t.AppendRow(table.Row{"Max Latency", "n/a"})
+		t.AppendRow(table.Row{"Avg Latency", "n/a"})
+	}
+
+	t.AppendRow(table.Row{"Sleep Interval", opts.Sleep})
+
+	fmt.Println("\n--- Ping Stats ---")
+	t.Render()
+
+	// Print log file path if applicable
 	if opts.LogToFile && opts.LogFilePath != "" {
 		fmt.Printf("\nLog file saved to:\n%s\n", opts.LogFilePath)
 	}

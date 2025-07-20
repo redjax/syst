@@ -97,7 +97,7 @@ func defaultHTTPPing(opts *Options) error {
 	}
 
 	// Print latency summary after finishing
-	PrintPingSummaryTable(opts)
+	PrettyPrintPingSummaryTable(opts)
 
 	return nil
 }
