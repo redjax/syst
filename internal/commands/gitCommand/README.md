@@ -22,12 +22,12 @@ Prune local branches that have been deleted from the remote.
 
 Flags:
 
-| Flag | Purpose |
-| ---- | ------- |
-| `--confirm` | Prompt before deleting each branch |
-| `--dry-run` | Show information about the current Git repository |
-| `--force` | Force delete branches using `git branch -D` |
-| `--main-branch` `[branch-name]` | The name of your main branch (default: `main`) |
+| Flag                            | Purpose                                           |
+| ------------------------------- | ------------------------------------------------- |
+| `--confirm`                     | Prompt before deleting each branch                |
+| `--dry-run`                     | Show information about the current Git repository |
+| `--force`                       | Force delete branches using `git branch -D`       |
+| `--main-branch` `[branch-name]` | The name of your main branch (default: `main`)    |
 
 ### sparse-clone
 
@@ -47,11 +47,12 @@ Whether this command actually simplifies anything or not, it at least "chains" t
 
 Flags:
 
-| Flag | Purpose |
-| `-b/--checkout-branch [branch-name]` | Branch name to checkout (default: `main`) |
-| `-p/--checkout-path [path]` | Paths to sparse-checkout (repeatable, i.e. `-p path/one -p path/two`) |
-| `-o/--output-dir [path/on/host]` | Output directory (defaults to repo name) |
-| `--protocol [https/ssh]` | Clone protocol: `ssh` or `https` (default: `ssh`) |
-| `--provider [provider-name]` | Git provider (`github`, `gitlab`, `codeberg`) (default: `github`) |
-| `-r/--repository [repo-name]` | Repository name |
-| `-u/--username [user-or-org-name]` | Git username or org |
+| Flag                                 | Purpose                                                               |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `-b/--checkout-branch [branch-name]` | Branch name to checkout (default: `main`)                             |
+| `-p/--checkout-path [path]`          | Paths to sparse-checkout (repeatable, i.e. `-p path/one -p path/two`) |
+| `-o/--output-dir [path/on/host]`     | Output directory (defaults to repo name)                              |
+| `--protocol [https/ssh]`             | Clone protocol: `ssh` or `https` (default: `ssh`)                     |
+| `--provider [provider-name]`         | Git provider (`github`, `gitlab`, `codeberg`) (default: `github`)     |
+| `-r/--repository [repo-name]`        | Repository name                                                       |
+| `-u/--username [user-or-org-name]`   | Git username or org                                                   |
