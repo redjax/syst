@@ -3,7 +3,7 @@ package showCommand
 import (
 	"fmt"
 
-	"github.com/redjax/syst/internal/constants"
+	"github.com/redjax/syst/internal/services/platformService/constants"
 	utils "github.com/redjax/syst/internal/utils/convert"
 
 	"github.com/spf13/cobra"
