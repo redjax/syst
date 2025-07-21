@@ -14,11 +14,14 @@ func runICMPPing(opts *Options) error {
 	if err != nil {
 		return fmt.Errorf("failed to create pinger: %w", err)
 	}
+
 	pinger.SetPrivileged(false)
 	if opts.Count > 0 {
 		pinger.Count = opts.Count
 	}
+
 	pinger.Interval = opts.Sleep
+
 	opts.Stats = &PingStats{}
 
 	// Start spinner (like in your HTTP ping)
@@ -27,6 +30,7 @@ func runICMPPing(opts *Options) error {
 
 	// Setup Ctrl-C and context cancellation handling
 	sigCh := make(chan os.Signal, 1)
+
 	signal.Notify(sigCh, os.Interrupt)
 	defer signal.Stop(sigCh)
 
@@ -51,18 +55,22 @@ func runICMPPing(opts *Options) error {
 		if opts.Stats.MinLatency == 0 || pkt.Rtt < opts.Stats.MinLatency {
 			opts.Stats.MinLatency = pkt.Rtt
 		}
+
 		if pkt.Rtt > opts.Stats.MaxLatency {
 			opts.Stats.MaxLatency = pkt.Rtt
 		}
 
 		// Temporarily stop spinner to print message, then restart
 		stopSpinner()
+
 		msg := fmt.Sprintf("[OK] %d bytes from %s: icmp_seq=%d time=%v",
 			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
+
 		fmt.Println(msg)
 		if opts.LogToFile && opts.Logger != nil {
 			opts.Logger.Println(msg)
 		}
+
 		stopSpinner = spinner.StartSpinner("")
 	}
 
@@ -70,6 +78,7 @@ func runICMPPing(opts *Options) error {
 		opts.Stats.Total = stats.PacketsSent
 		opts.Stats.Successes = stats.PacketsRecv
 		opts.Stats.Failures = stats.PacketsSent - stats.PacketsRecv
+
 		stopSpinner() // done, stop spinner
 		PrettyPrintPingSummaryTable(opts)
 	}
