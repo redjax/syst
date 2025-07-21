@@ -2,6 +2,8 @@ package selfcommand
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/redjax/syst/internal/version"
 )
 
 // NewSelfCommand creates the 'self' parent command
@@ -13,7 +15,7 @@ func NewSelfCommand() *cobra.Command {
 	}
 
 	// Attach 'upgrade' as a subcommand
-	cmd.AddCommand(NewUpgradeCommand())
+	cmd.AddCommand(version.NewUpgradeCommand())
 	// Attach 'info' as a subcommand
 	cmd.AddCommand(NewPackageInfoCommand())
 
