@@ -117,7 +117,10 @@ func defaultHTTPPing(opts *Options) error {
 			break
 		}
 
-		time.Sleep(opts.Sleep)
+		if !sleepOrCancel(opts.Ctx, opts.Sleep) {
+			stopSpinner() // Stop the spinner
+			return nil
+		}
 	}
 
 	stopSpinner() // Stop the spinner

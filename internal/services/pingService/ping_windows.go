@@ -36,7 +36,7 @@ func runICMPPing(opts *Options) error {
 
 		start := time.Now()
 
-		cmd := exec.Command("ping", "-n", "1", opts.Target)
+		cmd := exec.CommandContext(opts.Ctx, "ping", "-n", "1", "-w", "1", opts.Target)
 		output, err := cmd.CombinedOutput()
 		latency := time.Since(start)
 
@@ -90,7 +90,10 @@ func runICMPPing(opts *Options) error {
 			break
 		}
 
-		time.Sleep(opts.Sleep)
+		if !sleepOrCancel(opts.Ctx, opts.Sleep) {
+			stopSpinner() // Stop the spinner
+			return nil
+		}
 	}
 
 	if opts.LogToFile && opts.Logger != nil {

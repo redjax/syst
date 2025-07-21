@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/redjax/syst/internal/utils/spinner"
@@ -36,7 +37,23 @@ func runICMPPing(opts *Options) error {
 
 		start := time.Now()
 
-		cmd := exec.Command("ping", "-c", "1", opts.Target)
+		cmd := exec.Command("ping", "-c", "1", "-W", "1", opts.Target)
+		// Start ping in a new process group on UNIX-like systems
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+
+		done := make(chan struct{})
+		go func() {
+			select {
+			case <-opts.Ctx.Done():
+				if cmd.Process != nil {
+					_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+				}
+			case <-done:
+			}
+		}()
+
 		output, err := cmd.CombinedOutput()
 		latency := time.Since(start)
 
@@ -91,7 +108,10 @@ func runICMPPing(opts *Options) error {
 			break
 		}
 
-		time.Sleep(opts.Sleep)
+		if !sleepOrCancel(opts.Ctx, opts.Sleep) {
+			stopSpinner() // Stop the spinner
+			return nil
+		}
 	}
 
 	if opts.LogToFile && opts.Logger != nil {

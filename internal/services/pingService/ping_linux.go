@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/redjax/syst/internal/utils/spinner"
@@ -25,21 +26,33 @@ func runICMPPing(opts *Options) error {
 	for opts.Count == 0 || i <= opts.Count {
 		select {
 		case <-opts.Ctx.Done():
-			msg := "\n[!] Interrupt received, stopping ICMP ping"
-			fmt.Println(msg)
-			if opts.LogToFile && opts.Logger != nil {
-				opts.Logger.Println(msg)
-			}
+			// handle as before
 			return nil
 		default:
 		}
 
-		start := time.Now() // record start time
+		start := time.Now()
+		cmd := exec.Command("ping", "-c", "1", "-W", "1", opts.Target)
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
 
-		cmd := exec.Command("ping", "-c", "1", opts.Target)
+		// Now ensure we *always* kill the group if the context is canceled
+		done := make(chan struct{})
+		go func() {
+			select {
+			case <-opts.Ctx.Done():
+				if cmd.Process != nil {
+					_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+				}
+			case <-done:
+			}
+		}()
+
 		output, err := cmd.CombinedOutput()
+		close(done)
 
-		latency := time.Since(start) // record duration
+		latency := time.Since(start)
 
 		opts.Stats.Total++
 
@@ -95,7 +108,10 @@ func runICMPPing(opts *Options) error {
 			break
 		}
 
-		time.Sleep(opts.Sleep)
+		if !sleepOrCancel(opts.Ctx, opts.Sleep) {
+			stopSpinner() // Stop the spinner
+			return nil
+		}
 	}
 
 	if opts.LogToFile && opts.Logger != nil {

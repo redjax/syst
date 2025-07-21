@@ -85,3 +85,12 @@ func createLogFilePath(target string) string {
 
 	return filepath.Join(os.TempDir(), fileName)
 }
+
+func sleepOrCancel(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
+	}
+}
