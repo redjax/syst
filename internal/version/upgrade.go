@@ -16,8 +16,13 @@ import (
 
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
 func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
-	info := GetPackageInfo()
-	repo := fmt.Sprintf("%s/%s", info.RepoUser, info.RepoName)
+	repo, err := getRepoUrlPath()
+	if err != nil {
+		fmt.Printf("Error getting repository path (user/repo): %w", err)
+
+		return err
+	}
+
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 
 	fmt.Fprintln(cmd.ErrOrStderr(), "Checking for latest release...")
