@@ -15,6 +15,14 @@
   <img alt="GitHub Commits this Year" src="https://img.shields.io/github/commit-activity/y/redjax/syst">
   <img alt="Github Repo Size" src="https://img.shields.io/github/repo-size/redjax/syst">
 </p>
+<!-- Health badges/shields -->
+<p align="center">
+  <span>Healthchecks: </span>
+  <img alt="Github CodeQL Workflow Status" src="https://img.shields.io/github/actions/workflow/status/redjax/syst/codeql-analysis.yml?branch=main&label=codeQL&labelColor=teal">
+  <img alt="GitHub OSV Scan Workflow Status" src="https://img.shields.io/github/actions/workflow/status/redjax/syst/osv-scan.yml?branch=main&label=osvScan&labelColor=maroon">
+  <img alt="GitHub Secrets Scan Workflow Status" src="https://img.shields.io/github/actions/workflow/status/redjax/syst/secrets-scan.yml?branch=main&label=secretsScan&lablColor=silver">
+
+</p>
 
 `syst` is a CLI system utility tool. There are multiple subcommands for getting/showing platform info, creating `.zip` backups, and pinging sites/hosts. More functionality will be added over time.
 
