@@ -10,7 +10,7 @@ func showPackageInfo(cmd *cobra.Command, args []string) error {
 	pkgInfo := GetPackageInfo()
 
 	fmt.Printf(
-		"Program: %s\nOwner: %s\nRepository Name: %s\nRepository URL: %s\nVersion: %s\nCommit: %s\nRelease Date: %s",
+		"Program: %s\nOwner: %s\nRepository Name: %s\nRepository URL: %s\nVersion: %s\nCommit: %s\nRelease Date: %s\n",
 		pkgInfo.PackageName,
 		pkgInfo.RepoUser,
 		pkgInfo.RepoName,
