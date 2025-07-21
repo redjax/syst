@@ -102,12 +102,15 @@ func PrintRepoInfo() error {
 	}
 
 	// Repo Path
-	fmt.Printf("%-18s %s\n", "Repository Path:", info.Path)
-
-	// Repo Size as human readable
-	fmt.Printf("%-18s %s\n", "Repo Size:", BytesToHumanReadable(uint64(info.SizeBytes)))
+	if !info.IsRepo {
+		fmt.Printf("%-18s %s\n", "Path is not a Git repository:", info.Path)
+	} else {
+		fmt.Printf("%-18s %s\n", "Repository Path:", info.Path)
+	}
 
 	if info.IsRepo {
+		// Repo Size as human readable
+		fmt.Printf("%-18s %s\n", "Repo Size:", BytesToHumanReadable(uint64(info.SizeBytes)))
 
 		if info.SyncStatus != nil {
 			fmt.Println("Sync Status:")
