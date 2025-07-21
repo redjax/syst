@@ -60,7 +60,12 @@ Supports flags like count, delay between pings, and file-based logging.`,
 
 	// Add ping command flags
 	cmd.Flags().IntVarP(&count, "count", "c", 3, "Number of pings to send (0 = infinite)")
-	cmd.Flags().IntVarP(&sleep, "sleep", "s", 1, "Seconds to sleep between pings")
+	// Main flag with primary shorthand -s
+	cmd.Flags().IntVarP(&sleep, "sleep", "s", 1, "Seconds to sleep between pings (hidden alias: -t)")
+
+	// Secondary alias flag -t (hidden, same variable)
+	cmd.Flags().IntVarP(&sleep, "sleep-alias", "t", 1, "")
+	_ = cmd.Flags().MarkHidden("sleep-alias")
 	cmd.Flags().BoolVar(&useHTTP, "http", false, "Send HTTP HEAD request instead of ICMP ping")
 	cmd.Flags().BoolVar(&logToFile, "log-file", false, "Log output to a temp file with date and host/FQDN")
 
