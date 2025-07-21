@@ -1,0 +1,18 @@
+---
+name: OSV scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    ## Every day at 1am
+    - cron: '0 1 * * *'
+
+jobs:
+  ## Google Open Source Vulnerability (OSV) scanner
+  #  https://osv.dev
+  osv-scan:
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@main
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
