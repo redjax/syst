@@ -125,7 +125,10 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 	newPath := exePath + ".new"
 	if err := copyFile(binaryTmp, newPath); err != nil {
-		return fmt.Errorf("failed to copy new binary: %w", err)
+		if os.IsPermission(err) {
+			fmt.Fprintln(cmd.ErrOrStderr(), "Permission denied: try running with 'sudo syst self upgrade'")
+		}
+		return fmt.Errorf("failed to save new binary: %w", err)
 	}
 
 	fmt.Fprintf(cmd.ErrOrStderr(),
