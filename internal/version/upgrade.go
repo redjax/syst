@@ -15,7 +15,7 @@ import (
 )
 
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
-func UpgradeSelf(cmd *cobra.Command, args []string) error {
+func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	info := GetPackageInfo()
 	repo := fmt.Sprintf("%s/%s", info.RepoUser, info.RepoName)
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
@@ -46,6 +46,11 @@ func UpgradeSelf(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintln(cmd.ErrOrStderr(), "Latest version:", release.TagName)
+
+	if checkOnly {
+		fmt.Fprintln(cmd.ErrOrStderr(), "✅ A newer version may be available. Use this command without --check to upgrade.")
+		return nil
+	}
 
 	// Match correct release asset
 	normalizedOS := normalizeOS(runtime.GOOS)
