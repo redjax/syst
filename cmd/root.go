@@ -12,7 +12,6 @@ import (
 	_git "github.com/redjax/syst/internal/commands/gitCommand"
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
-	selfcommand "github.com/redjax/syst/internal/commands/selfCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
 	_which "github.com/redjax/syst/internal/commands/whichCommand"
@@ -71,7 +70,7 @@ func init() {
 	rootCmd.AddCommand(scanPath.NewScanPathCommand())
 	rootCmd.AddCommand(pingo.NewPingCommand())
 	rootCmd.AddCommand(strutilcommand.NewStrUtilCommand())
-	rootCmd.AddCommand(selfcommand.NewSelfCommand())
+	rootCmd.AddCommand(version.NewSelfCommand())
 	rootCmd.AddCommand(_which.NewWhichCommand())
 	rootCmd.AddCommand(_git.NewGitCommand())
 
