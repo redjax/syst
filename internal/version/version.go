@@ -1,8 +1,11 @@
 package version
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -40,4 +43,23 @@ func GetPackageInfo() PackageInfo {
 		PackageCommit:      Commit,
 		PackageReleaseDate: Date,
 	}
+}
+
+// Returns the user/repo portion of a repository URL
+func getRepoUrlPath() (string, error) {
+	u, err := url.Parse(RepoUrl)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL: %w", err)
+	}
+
+	// Trim leading and trailing slashes for safe splitting
+	trimmedPath := strings.Trim(u.Path, "/")
+
+	// Split the path
+	segments := strings.Split(trimmedPath, "/")
+	if len(segments) < 2 {
+		return "", fmt.Errorf("URL doesn't contain enough path segments for user/repo")
+	}
+
+	return fmt.Sprintf("%s/%s", segments[0], segments[1]), nil
 }
