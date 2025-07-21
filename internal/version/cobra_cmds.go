@@ -39,7 +39,13 @@ func NewVersionCommand() *cobra.Command {
 		Use:   "version",
 		Short: "Print CLI's version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("package: %s version:%s commit:%s date:%s\n", Package, Version, Commit, Date)
+			pkgInfo := GetPackageInfo()
+			fmt.Printf("package: %s version:%s commit:%s date:%s\n",
+				pkgInfo.PackageName,
+				pkgInfo.PackageVersion,
+				pkgInfo.PackageCommit,
+				pkgInfo.PackageReleaseDate,
+			)
 		},
 	}
 }

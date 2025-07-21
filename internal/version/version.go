@@ -1,15 +1,17 @@
 package version
 
+import (
+	"os"
+	"path/filepath"
+)
+
 var (
 	Version = "dev"
 	Commit  = "none"
 	Date    = "unknown"
 
 	// Change this for new packages
-	RepoUser = "redjax"
-	RepoName = "syst"
-	RepoUrl  = "https://github.com/redjax/syst"
-	Package  = "syst"
+	RepoUrl = "https://github.com/redjax/syst"
 )
 
 type PackageInfo struct {
@@ -24,11 +26,16 @@ type PackageInfo struct {
 
 // GetPackageInfo returns a struct with information about the current package
 func GetPackageInfo() PackageInfo {
+	exePath, err := os.Executable()
+	binName := "<unknown>"
+
+	if err == nil {
+		binName = filepath.Base(exePath)
+	}
+
 	return PackageInfo{
-		PackageName:        Package,
+		PackageName:        binName,
 		RepoUrl:            RepoUrl,
-		RepoUser:           RepoUser,
-		RepoName:           RepoName,
 		PackageVersion:     Version,
 		PackageCommit:      Commit,
 		PackageReleaseDate: Date,
