@@ -40,10 +40,10 @@ type PingStats struct {
 func RunPing(opts *Options) error {
 	opts.Target = strings.TrimSpace(opts.Target)
 	if opts.Target == "" {
-		return ErrEmptyTarget
+		return fmt.Errorf("ping target cannot be empty")
 	}
 
-	// Setup logging if requested
+	// Setup logging if needed
 	if opts.LogToFile {
 		filePath := createLogFilePath(opts.Target)
 		f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -51,20 +51,27 @@ func RunPing(opts *Options) error {
 			return fmt.Errorf("failed to create log file: %w", err)
 		}
 
-		// Only write to the file — not stdout
 		logger := log.New(f, "", log.LstdFlags)
 		opts.Logger = logger
 		opts.LogFilePath = filePath
-
-		// You can manually log as the first entry:
-		logger.Printf("Logging started for ping to %s", opts.Target)
+		logger.Printf("Logging started for ping to %s\n", opts.Target)
 	}
 
+	// Show info string
+	numPings := "inf"
+	if opts.Count != 0 {
+		numPings = fmt.Sprintf("%d", opts.Count)
+	}
+
+	fmt.Printf("> Pinging %s [ # pings: %s | sleep: %v | protocol: %s ]\n",
+		opts.Target, numPings, opts.Sleep, protocolLabel(opts))
+
+	// Delegate ping logic
 	if opts.UseHTTP {
-		return runHTTPPing(opts)
+		return defaultHTTPPing(opts) // keep your existing HTTP ping
 	}
 
-	return runICMPPing(opts)
+	return runICMPPing(opts) // this is now portable Go
 }
 
 func createLogFilePath(target string) string {
@@ -75,4 +82,13 @@ func createLogFilePath(target string) string {
 	fileName := fmt.Sprintf("%s_pingo_%s.log", dateStr, safeTarget)
 
 	return filepath.Join(os.TempDir(), fileName)
+}
+
+func sleepOrCancel(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
+	}
 }
