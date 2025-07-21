@@ -62,16 +62,21 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 	// Version Comparison
 	cmp := compareVersion(current, latest)
-	if checkOnly {
-		switch cmp {
-		case -1:
-			fmt.Fprintf(cmd.ErrOrStderr(), "🚀 Upgrade available: %s → %s\n", current, latest)
+
+	switch cmp {
+	case -1:
+		// local is behind → upgrade available
+		fmt.Fprintf(cmd.ErrOrStderr(), "🚀 Upgrade available: %s → %s\n", current, latest)
+		if checkOnly {
 			fmt.Fprintln(cmd.ErrOrStderr(), "✅ Use this command without --check to upgrade.")
-		case 0:
-			fmt.Fprintf(cmd.ErrOrStderr(), "🔄 No new release available – you are up to date (%s).\n", current)
-		case 1:
-			fmt.Fprintf(cmd.ErrOrStderr(), "🕑 You're ahead of the latest release: current=%s, release=%s\n", current, latest)
+			return nil
 		}
+	// Allow to continue into upgrade logic
+	case 0:
+		fmt.Fprintf(cmd.ErrOrStderr(), "🔄 No new release available – you are up to date (%s).\n", current)
+		return nil
+	case 1:
+		fmt.Fprintf(cmd.ErrOrStderr(), "🕑 You're ahead of the latest release: current=%s, release=%s\n", current, latest)
 		return nil
 	}
 
