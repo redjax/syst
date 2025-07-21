@@ -63,3 +63,34 @@ func getRepoUrlPath() (string, error) {
 
 	return fmt.Sprintf("%s/%s", segments[0], segments[1]), nil
 }
+
+func compareVersion(version1 string, version2 string) int {
+	// Strip suffixes (like -abcdef123)
+	ver1 := strings.SplitN(version1, "-", 2)[0]
+	ver2 := strings.SplitN(version2, "-", 2)[0]
+
+	s1 := strings.Split(ver1, ".")
+	s2 := strings.Split(ver2, ".")
+
+	maxlen := len(s1)
+	if len(s2) > maxlen {
+		maxlen = len(s2)
+	}
+
+	for i := 0; i < maxlen; i++ {
+		var n1, n2 int
+		if i < len(s1) {
+			fmt.Sscanf(s1[i], "%d", &n1)
+		}
+		if i < len(s2) {
+			fmt.Sscanf(s2[i], "%d", &n2)
+		}
+		if n1 > n2 {
+			return 1
+		}
+		if n1 < n2 {
+			return -1
+		}
+	}
+	return 0
+}

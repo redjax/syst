@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -16,18 +15,17 @@ import (
 
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
 func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
+	info := GetPackageInfo()
+
 	repo, err := getRepoUrlPath()
 	if err != nil {
-		fmt.Printf("Error getting repository path (user/repo): %w", err)
-
+		fmt.Fprintf(cmd.ErrOrStderr(), "Error getting repository path (user/repo): %v\n", err)
 		return err
 	}
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
-
 	fmt.Fprintln(cmd.ErrOrStderr(), "Checking for latest release...")
 
-	// Fetch latest GitHub release metadata
 	resp, err := http.Get(apiURL)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest release: %w", err)
@@ -50,14 +48,34 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 		return fmt.Errorf("failed to parse release JSON: %w", err)
 	}
 
-	fmt.Fprintln(cmd.ErrOrStderr(), "Latest version:", release.TagName)
+	current := info.PackageVersion
+	latest := release.TagName
 
+	fmt.Fprintln(cmd.ErrOrStderr(), "Current version:", current)
+	fmt.Fprintln(cmd.ErrOrStderr(), "Latest version: ", latest)
+
+	// Dev Build Detection
+	if strings.HasPrefix(current, "0.0.0-") {
+		fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  This is a development release: %s\n", current)
+		// Continue if you still want to allow upgrade, or return early
+	}
+
+	// Version Comparison
+	cmp := compareVersion(current, latest)
 	if checkOnly {
-		fmt.Fprintln(cmd.ErrOrStderr(), "✅ A newer version may be available. Use this command without --check to upgrade.")
+		switch cmp {
+		case -1:
+			fmt.Fprintf(cmd.ErrOrStderr(), "🚀 Upgrade available: %s → %s\n", current, latest)
+			fmt.Fprintln(cmd.ErrOrStderr(), "✅ Use this command without --check to upgrade.")
+		case 0:
+			fmt.Fprintf(cmd.ErrOrStderr(), "🔄 No new release available – you are up to date (%s).\n", current)
+		case 1:
+			fmt.Fprintf(cmd.ErrOrStderr(), "🕑 You're ahead of the latest release: current=%s, release=%s\n", current, latest)
+		}
 		return nil
 	}
 
-	// Match correct release asset
+	// Prepare platform asset name: e.g. linux-amd64.zip
 	normalizedOS := normalizeOS(runtime.GOOS)
 	expectedPrefix := fmt.Sprintf("%s-%s", normalizedOS, runtime.GOARCH)
 
@@ -70,21 +88,20 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	}
 
 	if assetURL == "" {
-		return fmt.Errorf("no suitable release found for %s/%s", runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("no suitable release found for platform: %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
-	// Download the release zip file
 	fmt.Fprintln(cmd.ErrOrStderr(), "Downloading:", assetURL)
 
 	resp2, err := http.Get(assetURL)
 	if err != nil {
-		return fmt.Errorf("failed to download binary: %w", err)
+		return fmt.Errorf("failed to download binary zip: %w", err)
 	}
 	defer resp2.Body.Close()
 
 	zipTmp, err := os.CreateTemp("", "syst-upgrade-*.zip")
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return fmt.Errorf("failed to create temp zip file: %w", err)
 	}
 	defer os.Remove(zipTmp.Name())
 
@@ -93,30 +110,28 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	}
 	zipTmp.Close()
 
-	// Extract the binary
+	// Extract binary from zip
 	binaryTmp, err := extractBinaryFromZip(zipTmp.Name())
 	if err != nil {
 		return fmt.Errorf("failed to extract binary: %w", err)
 	}
 	defer os.Remove(binaryTmp)
 
-	// Copy binary to current executable’s .new file. On next execution, bin will detect
-	//   the .new version and replace it on-the-fly.
+	// Prepare self-replacement
 	exePath, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("failed to locate current executable: %w", err)
+		return fmt.Errorf("failed to get executable path: %w", err)
 	}
 
 	newPath := exePath + ".new"
 	if err := copyFile(binaryTmp, newPath); err != nil {
-		return fmt.Errorf("failed to save new binary: %w", err)
+		return fmt.Errorf("failed to copy new binary: %w", err)
 	}
 
 	fmt.Fprintf(cmd.ErrOrStderr(),
-		"✅ Upgrade file written to:\n  %s\n"+
-			"  The upgrade will apply automatically the next time you run:\n  %s\n",
-		newPath,
-		filepath.Base(exePath))
+		"✅ Upgrade downloaded:\n  %s\n"+
+			"  It will be applied the next time you run the command.\n",
+		newPath)
 
 	return nil
 }
