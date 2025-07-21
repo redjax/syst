@@ -67,7 +67,7 @@ func defaultHTTPPing(opts *Options) error {
 				// STOP spinner temporarily before printing result
 				stopSpinner() // stop & clear spinner
 
-				msg = fmt.Sprintf("[%s] HTTP HEAD request to %s failed: %v (#%d)", resp.Status, url, err, i)
+				msg = fmt.Sprintf("[FAILURE] HTTP HEAD request to %s failed: %v (#%d)", url, err, i)
 				fmt.Println(msg)
 
 				// RESTART spinner

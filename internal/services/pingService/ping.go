@@ -57,12 +57,21 @@ func RunPing(opts *Options) error {
 		opts.LogFilePath = filePath
 
 		// You can manually log as the first entry:
-		logger.Printf("Logging started for ping to %s", opts.Target)
+		logger.Printf("Logging started for ping to %s\n", opts.Target)
+	}
+
+	numPings := "inf"
+	if opts.Count != 0 {
+		numPings = fmt.Sprintf("%d", opts.Count)
 	}
 
 	if opts.UseHTTP {
+		fmt.Printf("Requesting %s [ # pings: %s | sleep: %v ]\n", opts.Target, numPings, opts.Sleep)
+
 		return runHTTPPing(opts)
 	}
+
+	fmt.Printf("Pinging %s [ # pings: %s | sleep: %v ]\n", opts.Target, numPings, opts.Sleep)
 
 	return runICMPPing(opts)
 }
