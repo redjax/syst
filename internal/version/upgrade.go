@@ -55,9 +55,9 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	fmt.Fprintln(cmd.ErrOrStderr(), "Latest version: ", latest)
 
 	// Dev Build Detection
-	if strings.HasPrefix(current, "0.0.0-") {
-		fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  This is a development release: %s\n", current)
-		// Continue if you still want to allow upgrade, or return early
+	if current == "dev" {
+		fmt.Fprintf(cmd.ErrOrStderr(), "🛠️  This is a development release: %s\n", current)
+		return nil
 	}
 
 	// Version Comparison
@@ -65,18 +65,16 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 	switch cmp {
 	case -1:
-		// local is behind → upgrade available
 		fmt.Fprintf(cmd.ErrOrStderr(), "🚀 Upgrade available: %s → %s\n", current, latest)
 		if checkOnly {
 			fmt.Fprintln(cmd.ErrOrStderr(), "✅ Use this command without --check to upgrade.")
 			return nil
 		}
-	// Allow to continue into upgrade logic
 	case 0:
-		fmt.Fprintf(cmd.ErrOrStderr(), "🔄 No new release available – you are up to date (%s).\n", current)
+		fmt.Fprintf(cmd.ErrOrStderr(), "🔄 No new release available, syst is up to date (%s).\n", current)
 		return nil
 	case 1:
-		fmt.Fprintf(cmd.ErrOrStderr(), "🕑 You're ahead of the latest release: current=%s, release=%s\n", current, latest)
+		fmt.Fprintf(cmd.ErrOrStderr(), "🤯 You're ahead of the latest release: current=%s, release=%s\n", current, latest)
 		return nil
 	}
 
