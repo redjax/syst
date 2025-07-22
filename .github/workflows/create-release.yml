@@ -127,12 +127,20 @@ jobs:
               exit 1
             fi
 
-            ZIP_NAME="${OS_NAME}-${GOARCH}-${VERSION}.zip"
+            ZIP_NAME="syst-${OS_NAME}-${GOARCH}-${VERSION}.zip"
+            TAR_NAME="syst-${OS_NAME}-${GOARCH}-${VERSION}.tar.gz"
 
-            ## Create the zip in dist/ containing only the binary at the root
+            ## Create zip in dist/ containing only the binary at the root
             (cd dist && zip "$ZIP_NAME" "$BIN_FILE")
             if [ $? -ne 0 ]; then
               echo "Zip failed for $platform"
+              exit 1
+            fi
+
+            ## Create tar in dist/ containing only the binary at the root
+            (cd dist && tar -czf "$TAR_NAME" "$BIN_FILE")
+            if [ $? -ne 0 ]; then
+              echo "Tar failed for $platform"
               exit 1
             fi
 
@@ -146,7 +154,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
 
   ## Create Github release
   release:
