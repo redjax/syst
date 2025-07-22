@@ -108,14 +108,20 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+if [[ ! -d "$HOME/.local/bin" ]]; then
+  mkdir -p "$HOME/.local/bin"
+fi
+
 if [ "$OS" = "Darwin" ]; then
-  ## macOS: install to /usr/local/bin (may require sudo)
-  install -m 755 "$TMPDIR/syst" /usr/local/bin/
+  ## macOS: install to $HOME/.local/bin/
+  install -m 755 "$TMPDIR/syst" $HOME/.local/bin/
 else
-  ## Linux: install to /usr/local/bin (may require sudo)
-  sudo install -m 755 "$TMPDIR/syst" /usr/local/bin/
+  ## Linux: install to $HOME/.local/bin/
+  sudo install -m 755 "$TMPDIR/syst" $HOME/.local/bin/
 fi
 
 echo "syst installed successfully!"
+echo "You may need to add this to your ~/.bashrc:"
+echo "export PATH=\$PATH:\$HOME/.local/bin"
 
 exit 0
