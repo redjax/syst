@@ -71,8 +71,10 @@ func NewUpgradeCommand() *cobra.Command {
 	var checkOnly bool
 
 	cmd := &cobra.Command{
-		Use:   "upgrade",
-		Short: "Upgrade syst CLI to the latest release",
+		Use: "upgrade",
+		// Allow command to be called with update OR upgrade
+		Aliases: []string{"update"},
+		Short:   "Upgrade syst CLI to the latest release",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return UpgradeSelf(cmd, args, checkOnly)
 		},
