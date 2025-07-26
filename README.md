@@ -17,7 +17,7 @@
 </p>
 <!-- Health badges/shields -->
 <p align="center">
-  <span>Healthchecks: </span>
+  <span>🩺 Healthchecks: </span>
   <img alt="Github CodeQL Workflow Status" src="https://img.shields.io/github/actions/workflow/status/redjax/syst/codeql-analysis.yml?branch=main&label=codeQL&labelColor=teal">
   <img alt="GitHub OSV Scan Workflow Status" src="https://img.shields.io/github/actions/workflow/status/redjax/syst/osv-scan.yml?branch=main&label=osvScan&labelColor=maroon">
   <img alt="GitHub Secrets Scan Workflow Status" src="https://img.shields.io/github/actions/workflow/status/redjax/syst/secrets-scan.yml?branch=main&label=secretsScan&lablColor=silver">
