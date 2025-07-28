@@ -1,32 +1,29 @@
----
-name: Create manual release
+name: Verified Manual Release
 
 on:
   workflow_dispatch:
     inputs:
       releaseType:
-        description: "Release type (patch, minor, major)"
+        description: "Release type"
         required: true
         default: "patch"
-        type: string
-  # push:
-  #   tags:
-  #     - "v*"
-
-env:
-  ## If you copied this pipeline, change this for the current repo's bin name
-  BIN_NAME: syst
-  # If your main package is not at repo root, change this path (e.g. ./cmd/binName)
-  MAIN_PACKAGE_PATH: ./cmd/entrypoint/main.go
-
-permissions:
-  contents: write
 
 jobs:
+  secrets_scan:
+    uses: ./.github/workflows/secrets-scan.yml
+    if: always()
+
+  vulnerability_scan:
+    uses: ./.github/workflows/vulnerability-scan.yml
+    if: always()
+
   ## Create release tag
   tag:
     name: Create Git Tag
     runs-on: ubuntu-latest
+    needs:
+      - secrets_scan
+      - vulnerability_scan
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
