@@ -14,6 +14,7 @@ import (
 )
 
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
+// UpgradeSelf is the entrypoint for 'syst self upgrade'.
 func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	info := GetPackageInfo()
 
@@ -54,13 +55,11 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	fmt.Fprintln(cmd.ErrOrStderr(), "Current version:", current)
 	fmt.Fprintln(cmd.ErrOrStderr(), "Latest version: ", latest)
 
-	// Dev Build Detection
 	if current == "dev" {
 		fmt.Fprintf(cmd.ErrOrStderr(), "🛠️  This is a development release: %s\n", current)
 		return nil
 	}
 
-	// Version Comparison
 	cmp := compareVersion(current, latest)
 
 	switch cmp {
@@ -78,19 +77,38 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 		return nil
 	}
 
-	// Prepare platform asset name: e.g. linux-amd64.zip
 	normalizedOS := normalizeOS(runtime.GOOS)
-	expectedPrefix := fmt.Sprintf("%s-%s", normalizedOS, runtime.GOARCH)
+	arch := runtime.GOARCH
+
+	// Prepare expected prefix with syst-<os>-<arch>-
+	expectedPrefixLower := fmt.Sprintf("syst-%s-%s-", strings.ToLower(normalizedOS), strings.ToLower(arch))
+	expectedPrefixMacOS := fmt.Sprintf("syst-macOS-%s-", arch) // preserve macOS casing as assets use it exactly
 
 	var assetURL string
 	for _, asset := range release.Assets {
-		if strings.HasPrefix(asset.Name, expectedPrefix) && strings.HasSuffix(asset.Name, ".zip") {
-			assetURL = asset.BrowserDownloadURL
-			break
+		if asset.Name == "" {
+			continue
+		}
+		if normalizedOS == "macOS" {
+			// macOS casing exact match
+			if strings.HasPrefix(asset.Name, expectedPrefixMacOS) && strings.HasSuffix(asset.Name, ".zip") {
+				assetURL = asset.BrowserDownloadURL
+				break
+			}
+		} else {
+			// case-insensitive match for linux/windows
+			if strings.HasPrefix(strings.ToLower(asset.Name), expectedPrefixLower) && strings.HasSuffix(strings.ToLower(asset.Name), ".zip") {
+				assetURL = asset.BrowserDownloadURL
+				break
+			}
 		}
 	}
 
 	if assetURL == "" {
+		fmt.Fprintln(cmd.ErrOrStderr(), "Available assets:")
+		for _, asset := range release.Assets {
+			fmt.Fprintln(cmd.ErrOrStderr(), " -", asset.Name)
+		}
 		return fmt.Errorf("no suitable release found for platform: %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
@@ -113,14 +131,12 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	}
 	zipTmp.Close()
 
-	// Extract binary from zip
 	binaryTmp, err := extractBinaryFromZip(zipTmp.Name())
 	if err != nil {
 		return fmt.Errorf("failed to extract binary: %w", err)
 	}
 	defer os.Remove(binaryTmp)
 
-	// Prepare self-replacement
 	exePath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("failed to get executable path: %w", err)
@@ -144,11 +160,12 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 // normalizeOS maps runtime.GOOS to your release asset naming
 func normalizeOS(goos string) string {
-	if goos == "darwin" {
-		return "macOS"
+	switch strings.ToLower(goos) {
+	case "darwin":
+		return "macOS" // Keep casing as 'macOS' because the assets use it exactly
+	default:
+		return strings.ToLower(goos)
 	}
-
-	return goos
 }
 
 // extractBinaryFromZip extracts the binary from a zip file and returns path
