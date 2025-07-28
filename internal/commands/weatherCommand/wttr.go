@@ -16,6 +16,13 @@ func NewWttrCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wttr",
 		Short: "Get weather from wttr.in",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Ensure only 1 of --current/--forecast was passed
+			if current && forecast {
+				return fmt.Errorf("flags --current and --forecast cannot be used together; please specify only one")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			effectiveLocation := location
 
@@ -26,6 +33,7 @@ func NewWttrCommand() *cobra.Command {
 				}
 			}
 
+			// Request weather from wttr.in
 			_, weatherText, err := weatherservice.FetchWeather("wttr", effectiveLocation, current, forecast)
 			if err != nil {
 				return err
