@@ -27,11 +27,17 @@ jobs:
   secrets_scan:
     name: Run Secrets Scan
     uses: ./.github/workflows/secrets-scan.yml
+    permissions:
+      actions: read
+      security-events: write
     
   ## Reuse the vulnerability scan workflow
   vulnerability_scan:
     name: Run Vulnerability Scan
     uses: ./.github/workflows/vulnerability-scan.yml
+    permissions:
+      actions: read
+      security-events: write
 
   ## Create release tag
   tag:
