@@ -54,6 +54,12 @@ To download & install in 1 command, do:
 curl -LsSf https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.sh | bash -s -- --auto
 ```
 
+For Windows, use:
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.ps1 | iex
+```
+
 ### From Release
 
 Install a release from the [releases page](https://github.com/redjax/syst/releases/latest).
