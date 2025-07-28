@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
 	"github.com/redjax/syst/internal/utils/spinner"
@@ -50,7 +51,9 @@ func runICMPPing(opts *Options) error {
 
 	results := make(chan pingResult, 100)
 	var mu sync.Mutex
+
 	received := map[int]bool{}
+	sentTime := map[int]time.Time{} // track when each seq was sent
 
 	pinger.OnRecv = func(pkt *probing.Packet) {
 		mu.Lock()
@@ -86,13 +89,74 @@ func runICMPPing(opts *Options) error {
 
 	fmt.Printf("PING %s (%s):\n", pinger.Addr(), pinger.IPAddr())
 
-	// Run ping in goroutine so we can monitor per-ping timeouts
+	// Run pinger in goroutine
 	go func() {
 		_ = pinger.Run()
 		close(results)
 	}()
 
-	var lastSeq int
+	// Separate goroutine to track timeouts per ping sequence
+	go func() {
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
+		timeout := pinger.Interval * 2 // adjust timeout window
+
+		for {
+			select {
+			case <-opts.Ctx.Done():
+				return
+			case <-ticker.C:
+				mu.Lock()
+				for seq, sentAt := range sentTime {
+					if received[seq] {
+						// already received
+						continue
+					}
+					if time.Since(sentAt) > timeout {
+						stopSpinner()
+						// timeout exceeded: print failure and mark it handled
+						fmt.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
+						if opts.LogToFile && opts.Logger != nil {
+							opts.Logger.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
+						}
+						opts.Stats.Total++
+						opts.Stats.Failures++
+						delete(sentTime, seq) // remove so not printed again
+
+						stopSpinner = spinner.StartSpinner("")
+					}
+				}
+				mu.Unlock()
+			}
+		}
+	}()
+
+	// Capture sent pings by periodically reading stats
+	go func() {
+		ticker := time.NewTicker(pinger.Interval)
+		defer ticker.Stop()
+
+		var lastSent int = -1
+
+		for {
+			select {
+			case <-opts.Ctx.Done():
+				return
+			case <-ticker.C:
+				stats := pinger.Statistics()
+				mu.Lock()
+				for seq := lastSent + 1; seq < stats.PacketsSent; seq++ {
+					sentTime[seq] = time.Now()
+					opts.Stats.Total++
+				}
+				lastSent = stats.PacketsSent - 1
+				mu.Unlock()
+			}
+		}
+	}()
+
+	// Main loop to print results from OnRecv
 	for res := range results {
 		stopSpinner()
 		fmt.Println(res.msg)
@@ -100,23 +164,9 @@ func runICMPPing(opts *Options) error {
 			opts.Logger.Println(res.msg)
 		}
 		stopSpinner = spinner.StartSpinner("")
-		lastSeq = res.seq
 	}
 
-	// After pinger exits, check for missing pings
-	for i := 0; i <= lastSeq; i++ {
-		mu.Lock()
-		if !received[i] {
-			opts.Stats.Total++
-			opts.Stats.Failures++
-			msg := fmt.Sprintf("[FAIL] No reply from %s (icmp_seq=%d)", opts.Target, i)
-			fmt.Println(msg)
-			if opts.LogToFile && opts.Logger != nil {
-				opts.Logger.Println(msg)
-			}
-		}
-		mu.Unlock()
-	}
+	// After pinger exits, remaining missing failures will have been printed by timeout goroutine.
 
 	return nil
 }
