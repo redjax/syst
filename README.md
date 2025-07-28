@@ -39,6 +39,8 @@
 - [Upgrading](#upgrading)
 - [Usage](#usage)
   - [Commands](#commands)
+- [Uninstalling](#uninstalling)
+- [Reinstalling](#reinstalling)
 
 ## Install
 
@@ -71,3 +73,20 @@ Run `syst --help` to print the help menu. For each subcommand, i.e. `syst show`,
 ### Commands
 
 Browse the [commands/ directory](./internal/commands/) to read more about subcommands for this CLI.
+
+## Uninstalling
+
+On Linux, run `sudo rm $(which syst)` to uninstall `syst`.
+
+## Reinstalling
+
+If you have an issue with the `self upgrade` command, you can uninstall & reinstall `syst` with this:
+
+Linux:
+
+```bash
+command -v syst >/dev/null 2>&1 && sudo rm "$(command -v syst)" &>/dev/null
+curl -LsSf https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.sh | bash -s -- --auto
+```
+
+You can also [uninstall `syst`](#uninstalling), then reinstall using the one-liner at the top of this page.
