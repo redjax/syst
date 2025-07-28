@@ -54,40 +54,32 @@ SYST_VERSION="${SYST_VERSION#v}"
 
 echo "Installing syst v${SYST_VERSION}"
 
-## Map to GitHub asset names
+## Normalize architecture names for your release naming
+case "$ARCH" in
+  x86_64)
+    ARCH_NORM="amd64"
+    ;;
+  aarch64|arm64)
+    ARCH_NORM="arm64"
+    ;;
+  *)
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+    ;;
+esac
+
+## Map asset names
 case "$OS" in
-Linux)
-  case "$ARCH" in
-  x86_64)
-    FILE="syst-linux-amd64-${SYST_VERSION}.zip"
+  Linux)
+    FILE="syst-linux-${ARCH_NORM}-${SYST_VERSION}.zip"
     ;;
-  aarch64 | arm64)
-    FILE="syst-linux-arm64-${SYST_VERSION}.zip"
+  Darwin)
+    FILE="syst-macOS-${ARCH_NORM}-${SYST_VERSION}.zip"
     ;;
   *)
-    echo "Unsupported Linux architecture: $ARCH"
+    echo "Unsupported OS: $OS"
     exit 1
     ;;
-  esac
-  ;;
-Darwin)
-  case "$ARCH" in
-  x86_64)
-    FILE="syst-macOS-${SYST_VERSION}.zip"
-    ;;
-  arm64)
-    FILE="syst-macOS-${SYST_VERSION}.zip"
-    ;;
-  *)
-    echo "Unsupported macOS architecture: $ARCH"
-    exit 1
-    ;;
-  esac
-  ;;
-*)
-  echo "Unsupported OS: $OS"
-  exit 1
-  ;;
 esac
 
 ## Create a temporary directory
