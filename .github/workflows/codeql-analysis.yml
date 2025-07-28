@@ -2,6 +2,7 @@
 name: Code Quality Analysis
 
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
     ## Every day at 1am
