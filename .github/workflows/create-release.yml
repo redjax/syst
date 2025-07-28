@@ -26,12 +26,12 @@ jobs:
   ## Reuse the secrets scan workflow
   secrets_scan:
     name: Run Secrets Scan
-    uses: ./github/workflows/secrets-scan.yml@feat/release-pipeline
+    uses: ./.github/workflows/secrets-scan.yml@feat/release-pipeline
     
   ## Reuse the vulnerability scan workflow
   vulnerability_scan:
     name: Run Vulnerability Scan
-    uses: ./github/workflows/vulnerability-scan.yml@feat/release-pipeline
+    uses: ./.github/workflows/vulnerability-scan.yml@feat/release-pipeline
 
   ## Create release tag
   tag:
