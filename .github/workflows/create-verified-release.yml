@@ -8,6 +8,15 @@ on:
         required: true
         default: "patch"
 
+env:
+  ## If you copied this pipeline, change this for the current repo's bin name
+  BIN_NAME: syst
+  # If your main package is not at repo root, change this path (e.g. ./cmd/binName)
+  MAIN_PACKAGE_PATH: ./cmd/entrypoint
+
+permissions:
+  contents: write
+
 jobs:
   secrets_scan:
     uses: ./.github/workflows/secrets-scan.yml
