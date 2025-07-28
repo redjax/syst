@@ -28,6 +28,7 @@ jobs:
     name: Run Secrets Scan
     uses: ./.github/workflows/secrets-scan.yml
     permissions:
+      contents: read
       actions: read
       security-events: write
     
@@ -36,6 +37,7 @@ jobs:
     name: Run Vulnerability Scan
     uses: ./.github/workflows/vulnerability-scan.yml
     permissions:
+      contents: read
       actions: read
       security-events: write
 
