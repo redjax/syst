@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
 	"github.com/redjax/syst/internal/utils/spinner"
@@ -30,7 +31,6 @@ func runICMPPing(opts *Options) error {
 
 	// Setup Ctrl-C and context cancellation handling
 	sigCh := make(chan os.Signal, 1)
-
 	signal.Notify(sigCh, os.Interrupt)
 	defer signal.Stop(sigCh)
 
@@ -55,7 +55,6 @@ func runICMPPing(opts *Options) error {
 		if opts.Stats.MinLatency == 0 || pkt.Rtt < opts.Stats.MinLatency {
 			opts.Stats.MinLatency = pkt.Rtt
 		}
-
 		if pkt.Rtt > opts.Stats.MaxLatency {
 			opts.Stats.MaxLatency = pkt.Rtt
 		}
@@ -65,13 +64,30 @@ func runICMPPing(opts *Options) error {
 
 		msg := fmt.Sprintf("[OK] %d bytes from %s: icmp_seq=%d time=%v",
 			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
-
 		fmt.Println(msg)
 		if opts.LogToFile && opts.Logger != nil {
 			opts.Logger.Println(msg)
 		}
 
 		stopSpinner = spinner.StartSpinner("")
+	}
+
+	// Throttle failure message to avoid flooding on repeated timeouts
+	var lastFailMsgTime time.Time
+
+	pinger.OnRecvError = func(err error) {
+		now := time.Now()
+		// Only print failure if 1 second has passed since last failure message (adjust as needed)
+		if now.Sub(lastFailMsgTime) > time.Second {
+			stopSpinner()
+			msg := fmt.Sprintf("[FAIL] No reply from %s (error: %v)", opts.Target, err)
+			fmt.Println(msg)
+			if opts.LogToFile && opts.Logger != nil {
+				opts.Logger.Println(msg)
+			}
+			stopSpinner = spinner.StartSpinner("")
+			lastFailMsgTime = now
+		}
 	}
 
 	pinger.OnFinish = func(stats *probing.Statistics) {
