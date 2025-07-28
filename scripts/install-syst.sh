@@ -59,10 +59,10 @@ case "$OS" in
 Linux)
   case "$ARCH" in
   x86_64)
-    FILE="linux-amd64-${SYST_VERSION}.zip"
+    FILE="syst-linux-amd64-${SYST_VERSION}.zip"
     ;;
   aarch64 | arm64)
-    FILE="linux-arm64-${SYST_VERSION}.zip"
+    FILE="syst-linux-arm64-${SYST_VERSION}.zip"
     ;;
   *)
     echo "Unsupported Linux architecture: $ARCH"
@@ -73,10 +73,10 @@ Linux)
 Darwin)
   case "$ARCH" in
   x86_64)
-    FILE="macOS-${SYST_VERSION}.zip"
+    FILE="syst-macOS-${SYST_VERSION}.zip"
     ;;
   arm64)
-    FILE="macOS-${SYST_VERSION}.zip"
+    FILE="syst-macOS-${SYST_VERSION}.zip"
     ;;
   *)
     echo "Unsupported macOS architecture: $ARCH"
