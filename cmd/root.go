@@ -14,6 +14,7 @@ import (
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
+	weathercommand "github.com/redjax/syst/internal/commands/weatherCommand"
 	_which "github.com/redjax/syst/internal/commands/whichCommand"
 	zipBak "github.com/redjax/syst/internal/commands/zipBakCommand"
 	"github.com/redjax/syst/internal/version"
@@ -73,6 +74,7 @@ func init() {
 	rootCmd.AddCommand(version.NewSelfCommand())
 	rootCmd.AddCommand(_which.NewWhichCommand())
 	rootCmd.AddCommand(_git.NewGitCommand())
+	rootCmd.AddCommand(weathercommand.NewWeatherCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
