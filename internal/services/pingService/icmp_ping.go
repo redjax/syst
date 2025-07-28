@@ -24,10 +24,12 @@ func runICMPPing(opts *Options) error {
 	pinger.Interval = opts.Sleep
 
 	opts.Stats = &PingStats{}
+
 	stopSpinner := spinner.StartSpinner("")
 	defer stopSpinner()
 
 	sigCh := make(chan os.Signal, 1)
+
 	signal.Notify(sigCh, os.Interrupt)
 	defer signal.Stop(sigCh)
 
@@ -35,10 +37,12 @@ func runICMPPing(opts *Options) error {
 		select {
 		case <-opts.Ctx.Done():
 			stopSpinner()
+
 			pinger.Stop()
 		case <-sigCh:
 			fmt.Println("\n[!] Canceled by user (Ctrl-C)")
 			stopSpinner()
+
 			pinger.Stop()
 		}
 	}()
@@ -68,12 +72,14 @@ func runICMPPing(opts *Options) error {
 		if opts.Stats.MinLatency == 0 || pkt.Rtt < opts.Stats.MinLatency {
 			opts.Stats.MinLatency = pkt.Rtt
 		}
+
 		if pkt.Rtt > opts.Stats.MaxLatency {
 			opts.Stats.MaxLatency = pkt.Rtt
 		}
 
 		msg := fmt.Sprintf("[OK] %d bytes from %s: icmp_seq=%d time=%v",
 			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
+
 		results <- pingResult{seq: pkt.Seq, ok: true, msg: msg}
 	}
 
@@ -113,15 +119,19 @@ func runICMPPing(opts *Options) error {
 						// already received
 						continue
 					}
+
 					if time.Since(sentAt) > timeout {
 						stopSpinner()
+
 						// timeout exceeded: print failure and mark it handled
 						fmt.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
 						if opts.LogToFile && opts.Logger != nil {
 							opts.Logger.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
 						}
+
 						opts.Stats.Total++
 						opts.Stats.Failures++
+
 						delete(sentTime, seq) // remove so not printed again
 
 						stopSpinner = spinner.StartSpinner("")
@@ -146,11 +156,14 @@ func runICMPPing(opts *Options) error {
 			case <-ticker.C:
 				stats := pinger.Statistics()
 				mu.Lock()
+
 				for seq := lastSent + 1; seq < stats.PacketsSent; seq++ {
 					sentTime[seq] = time.Now()
 					opts.Stats.Total++
 				}
+
 				lastSent = stats.PacketsSent - 1
+
 				mu.Unlock()
 			}
 		}
@@ -160,9 +173,11 @@ func runICMPPing(opts *Options) error {
 	for res := range results {
 		stopSpinner()
 		fmt.Println(res.msg)
+
 		if opts.LogToFile && opts.Logger != nil {
 			opts.Logger.Println(res.msg)
 		}
+
 		stopSpinner = spinner.StartSpinner("")
 	}
 
