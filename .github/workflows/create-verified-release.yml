@@ -21,10 +21,18 @@ jobs:
   secrets_scan:
     uses: ./.github/workflows/secrets-scan.yml
     if: always()
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
 
   vulnerability_scan:
     uses: ./.github/workflows/vulnerability-scan.yml
     if: always()
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
 
   ## Create release tag
   tag:
