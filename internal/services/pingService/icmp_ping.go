@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	probing "github.com/prometheus-community/pro-bing"
@@ -20,33 +21,49 @@ func runICMPPing(opts *Options) error {
 	if opts.Count > 0 {
 		pinger.Count = opts.Count
 	}
-
 	pinger.Interval = opts.Sleep
 
 	opts.Stats = &PingStats{}
 
-	// Start spinner (like in your HTTP ping)
 	stopSpinner := spinner.StartSpinner("")
 	defer stopSpinner()
 
-	// Setup Ctrl-C and context cancellation handling
 	sigCh := make(chan os.Signal, 1)
+
 	signal.Notify(sigCh, os.Interrupt)
 	defer signal.Stop(sigCh)
 
 	go func() {
 		select {
 		case <-opts.Ctx.Done():
-			stopSpinner() // stop spinner on context cancel
+			stopSpinner()
+
 			pinger.Stop()
 		case <-sigCh:
 			fmt.Println("\n[!] Canceled by user (Ctrl-C)")
 			stopSpinner()
+
 			pinger.Stop()
 		}
 	}()
 
+	type pingResult struct {
+		seq int
+		ok  bool
+		msg string
+	}
+
+	results := make(chan pingResult, 100)
+	var mu sync.Mutex
+
+	received := map[int]bool{}
+	sentTime := map[int]time.Time{} // track when each seq was sent
+
 	pinger.OnRecv = func(pkt *probing.Packet) {
+		mu.Lock()
+		defer mu.Unlock()
+		received[pkt.Seq] = true
+
 		opts.Stats.Total++
 		opts.Stats.Successes++
 		opts.Stats.Latencies = append(opts.Stats.Latencies, pkt.Rtt)
@@ -55,57 +72,116 @@ func runICMPPing(opts *Options) error {
 		if opts.Stats.MinLatency == 0 || pkt.Rtt < opts.Stats.MinLatency {
 			opts.Stats.MinLatency = pkt.Rtt
 		}
+
 		if pkt.Rtt > opts.Stats.MaxLatency {
 			opts.Stats.MaxLatency = pkt.Rtt
 		}
 
-		// Temporarily stop spinner to print message, then restart
-		stopSpinner()
-
 		msg := fmt.Sprintf("[OK] %d bytes from %s: icmp_seq=%d time=%v",
 			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
-		fmt.Println(msg)
-		if opts.LogToFile && opts.Logger != nil {
-			opts.Logger.Println(msg)
-		}
 
-		stopSpinner = spinner.StartSpinner("")
-	}
-
-	// Throttle failure message to avoid flooding on repeated timeouts
-	var lastFailMsgTime time.Time
-
-	pinger.OnRecvError = func(err error) {
-		now := time.Now()
-		// Only print failure if 1 second has passed since last failure message (adjust as needed)
-		if now.Sub(lastFailMsgTime) > time.Second {
-			stopSpinner()
-			msg := fmt.Sprintf("[FAIL] No reply from %s (error: %v)", opts.Target, err)
-			fmt.Println(msg)
-			if opts.LogToFile && opts.Logger != nil {
-				opts.Logger.Println(msg)
-			}
-			stopSpinner = spinner.StartSpinner("")
-			lastFailMsgTime = now
-		}
+		results <- pingResult{seq: pkt.Seq, ok: true, msg: msg}
 	}
 
 	pinger.OnFinish = func(stats *probing.Statistics) {
+		stopSpinner()
+
 		opts.Stats.Total = stats.PacketsSent
 		opts.Stats.Successes = stats.PacketsRecv
 		opts.Stats.Failures = stats.PacketsSent - stats.PacketsRecv
 
-		stopSpinner() // done, stop spinner
 		PrettyPrintPingSummaryTable(opts)
 	}
 
 	fmt.Printf("PING %s (%s):\n", pinger.Addr(), pinger.IPAddr())
 
-	err = pinger.Run()
-	if err != nil && opts.Ctx.Err() == nil {
+	// Run pinger in goroutine
+	go func() {
+		_ = pinger.Run()
+		close(results)
+	}()
+
+	// Separate goroutine to track timeouts per ping sequence
+	go func() {
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+
+		timeout := pinger.Interval * 2 // adjust timeout window
+
+		for {
+			select {
+			case <-opts.Ctx.Done():
+				return
+			case <-ticker.C:
+				mu.Lock()
+				for seq, sentAt := range sentTime {
+					if received[seq] {
+						// already received
+						continue
+					}
+
+					if time.Since(sentAt) > timeout {
+						stopSpinner()
+
+						// timeout exceeded: print failure and mark it handled
+						fmt.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
+						if opts.LogToFile && opts.Logger != nil {
+							opts.Logger.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
+						}
+
+						opts.Stats.Total++
+						opts.Stats.Failures++
+
+						delete(sentTime, seq) // remove so not printed again
+
+						stopSpinner = spinner.StartSpinner("")
+					}
+				}
+				mu.Unlock()
+			}
+		}
+	}()
+
+	// Capture sent pings by periodically reading stats
+	go func() {
+		ticker := time.NewTicker(pinger.Interval)
+		defer ticker.Stop()
+
+		var lastSent int = -1
+
+		for {
+			select {
+			case <-opts.Ctx.Done():
+				return
+			case <-ticker.C:
+				stats := pinger.Statistics()
+				mu.Lock()
+
+				for seq := lastSent + 1; seq < stats.PacketsSent; seq++ {
+					sentTime[seq] = time.Now()
+					opts.Stats.Total++
+				}
+
+				lastSent = stats.PacketsSent - 1
+
+				mu.Unlock()
+			}
+		}
+	}()
+
+	// Main loop to print results from OnRecv
+	for res := range results {
 		stopSpinner()
-		return fmt.Errorf("pinger error: %w", err)
+		fmt.Println(res.msg)
+
+		if opts.LogToFile && opts.Logger != nil {
+			opts.Logger.Println(res.msg)
+		}
+
+		stopSpinner = spinner.StartSpinner("")
 	}
+
+	// After pinger exits, remaining missing failures will have been printed by timeout goroutine.
 
 	return nil
 }
