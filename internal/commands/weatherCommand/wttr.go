@@ -2,6 +2,7 @@ package weathercommand
 
 import (
 	"fmt"
+	"os"
 
 	weatherservice "github.com/redjax/syst/internal/services/weatherService"
 	"github.com/spf13/cobra"
@@ -16,20 +17,23 @@ func NewWttrCommand() *cobra.Command {
 		Use:   "wttr",
 		Short: "Get weather from wttr.in",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			usedLocation, weatherText, err := weatherservice.FetchWeather("wttr", location, current, forecast)
+			effectiveLocation := location
+
+			// If CLI flag not set, try env var
+			if effectiveLocation == "" {
+				if envLoc := os.Getenv("WTTR_LOCATION"); envLoc != "" {
+					effectiveLocation = envLoc
+				}
+			}
+
+			_, weatherText, err := weatherservice.FetchWeather("wttr", effectiveLocation, current, forecast)
 			if err != nil {
 				return err
 			}
 
-			// If the user did not specify a location, show the detected location
-			if location == "" {
-				fmt.Printf("Detected Location: %s\n", usedLocation)
-			} else {
-				fmt.Printf("Location: %s\n", usedLocation)
-			}
-
 			fmt.Println(weatherText)
 			return nil
+
 		},
 	}
 
