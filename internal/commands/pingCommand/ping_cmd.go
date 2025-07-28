@@ -12,13 +12,9 @@ import (
 
 func NewPingCommand() *cobra.Command {
 	var (
-		// Number of times to ping target
-		count int
-		// Number of second(s) to sleep between pings
-		sleep int
-		// Send HTTP HEAD request instead of ICMP ping
-		useHTTP bool
-		// When present, output ping logs to a file
+		count     int
+		sleep     int
+		useHTTP   bool
 		logToFile bool
 	)
 
@@ -29,7 +25,7 @@ func NewPingCommand() *cobra.Command {
 Can be used to detect host availability and latency.
 
 Supports flags like count, delay between pings, and file-based logging.`,
-		Args: cobra.ExactArgs(1), // Requires exactly one argument (target)
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			target := args[0]
 
@@ -48,26 +44,27 @@ Supports flags like count, delay between pings, and file-based logging.`,
 				Stats:     stats,
 			}
 
-			// Start ping
 			err := pingService.RunPing(&opts)
 			if err != nil {
-				return err
+				// Detect DNS lookup failure or similar errors; print failure but suppress help.
+				if isDNSError(err) {
+					cmd.Printf("[FAIL] %s: %v\n", target, err)
+					return nil
+				}
+
+				// For other errors, print failure and suppress help.
+				cmd.Printf("[FAIL] %s: %v\n", target, err)
+				return nil
 			}
 
 			return nil
 		},
 	}
 
-	// Add ping command flags
 	cmd.Flags().IntVarP(&count, "count", "c", 3, "Number of pings to send (0 = infinite)")
-	// Main flag with primary shorthand -s
-	cmd.Flags().IntVarP(&sleep, "sleep", "s", 1, "Seconds to sleep between pings (hidden alias: -t)")
-
-	// Secondary alias flag -t (hidden, same variable)
-	cmd.Flags().IntVarP(&sleep, "sleep-alias", "t", 1, "")
-	_ = cmd.Flags().MarkHidden("sleep-alias")
-	cmd.Flags().BoolVar(&useHTTP, "http", false, "Send HTTP HEAD request instead of ICMP ping")
-	cmd.Flags().BoolVar(&logToFile, "log-file", false, "Log output to a temp file with date and host/FQDN")
+	cmd.Flags().IntVarP(&sleep, "sleep", "s", 1, "Seconds to sleep between pings")
+	cmd.Flags().BoolVar(&useHTTP, "http", false, "Use HTTP HEAD request instead of ICMP ping")
+	cmd.Flags().BoolVar(&logToFile, "log-file", false, "Log output to a temp file with date and host")
 
 	return cmd
 }
