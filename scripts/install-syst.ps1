@@ -18,7 +18,7 @@ if ($existingSyst) {
     if (-not $Auto) {
         $confirm = Read-Host "syst is already installed at $($existingSyst.Path). Download and install again? (y/N)"
         if ( -not ( $confirm -in @('y', 'Y', 'yes', 'Yes', 'YES' ) ) ) {
-            Write-Host "Aborting installation."
+            Read-Prompt "Cancelling installation, press a key to exit ..."
             exit 0
         }
     }
@@ -30,7 +30,7 @@ try {
     $release = Invoke-RestMethod -Uri $releaseApi -UseBasicParsing
 } catch {
     Write-Error "Failed to fetch latest release info: $($_.Exception.Message)"
-    exit 1
+    throw $_.Exception
 }
 
 $version = $release.tag_name.TrimStart('v')
@@ -48,7 +48,7 @@ try {
         $archNorm = 'arm64'
     } else {
         Write-Error "Unsupported architecture: $envArch"
-        exit 1
+        throw $_.Exception
     }
 }
 ## If CPU was not set by CIM, try to normalize
@@ -60,7 +60,7 @@ if ( -not $archNorm ) {
         12 { $archNorm = 'arm64' }
         default {
             Write-Error "Unsupported architecture code: $archCode"
-            exit 1
+            throw $_.Exception
         }
     }
 }
@@ -76,7 +76,7 @@ try {
     New-Item -ItemType Directory -Path $tempDir | Out-Null
 } catch {
     Write-Error "Failed to create temp dir: $($_.Exception.Message)"
-    exit 1
+    throw $_.Exception
 }
 
 $zipPath = Join-Path $tempDir $fileName
@@ -87,7 +87,8 @@ try {
 } catch {
     Write-Error "Failed to download asset: $($_.Exception.Message)"
     Remove-Item -Recurse -Force $tempDir
-    exit 1
+    
+    throw $_.Exception
 }
 
 Write-Host "Extracting package..."
@@ -96,7 +97,8 @@ try {
 } catch {
     Write-Error "Failed to extract archive: $_"
     Remove-Item -Recurse -Force $tempDir
-    exit 1
+    
+    throw $_.Exception
 }
 
 ## Expect binary named "syst.exe" in root of zip
@@ -104,7 +106,8 @@ $systExePath = Join-Path $tempDir 'syst.exe'
 if ( -not ( Test-Path $systExePath ) ) {
     Write-Error "Extracted package missing expected syst.exe"
     Remove-Item -Recurse -Force $tempDir
-    exit 1
+    
+    return
 }
 
 ## Copy executable to install path
@@ -114,7 +117,8 @@ try {
 } catch {
     Write-Error "Failed to install syst.exe: $($_.Exception.Message)"
     Remove-Item -Recurse -Force $tempDir
-    exit 1
+    
+    throw $_.Exception
 }
 
 Remove-Item -Recurse -Force $tempDir
@@ -129,5 +133,3 @@ if ( -not ( $userPath -split ';' | Where-Object { $_ -eq $installPath } ) ) {
     Write-Host "[Environment]::SetEnvironmentVariable('PATH',`"$userPath;$installPath`",'User')"
     Write-Host "Then restart your PowerShell session for changes to take effect."
 }
-
-exit 0
