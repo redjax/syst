@@ -17,7 +17,7 @@ $existingSyst = Get-Command syst -ErrorAction SilentlyContinue
 if ($existingSyst) {
     if (-not $Auto) {
         $confirm = Read-Host "syst is already installed at $($existingSyst.Path). Download and install again? (y/N)"
-        if ( -not ( $confirm in @('y', 'Y', 'yes', 'Yes', 'YES' ) ) ) {
+        if ( -not ( $confirm -in @('y', 'Y', 'yes', 'Yes', 'YES' ) ) ) {
             Write-Host "Aborting installation."
             exit 0
         }
