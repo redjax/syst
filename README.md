@@ -36,6 +36,7 @@
   - [Install script](#install-script)
   - [From Release](#from-release)
   - [Build Locally](#build-locally)
+- [Security Scans](#security-scans)
 - [Upgrading](#upgrading)
 - [Usage](#usage)
   - [Commands](#commands)
@@ -62,11 +63,24 @@ For Windows, use:
 
 ### From Release
 
-Install a release from the [releases page](https://github.com/redjax/syst/releases/latest).
+Install a release from the [releases page](https://github.com/redjax/syst/releases/latest). You can check the [Verfied Manual Release pipeline](https://github.com/redjax/syst/actions/workflows/create-verified-release.yml) to see the results of a secret & vulnerability scan done before the release.
 
 ### Build Locally
 
 Clone this repository and run [one of the build scripts](./scripts/build/).
+
+## Security Scans
+
+Each [release](https://github.com/redjax/syst/actions/workflows/create-verified-release.yml) undergoes a scan for secret leaks & Go vulnerabilities (insecure code, malicious dependencies, etc) before a release is created. If the scans detect a vulnerability, the release is cancelled.
+
+This repository also undergoes nightly scans for secret leaks, vulnerabilities, and codeQL. You can see the results in one of the following places:
+
+| Scan | Description |
+| ---- | ----------- |
+| [codeQL Analysis](./.github/workflows/codeql-analysis.yml) | [codeQL](https://codeql.github.com/docs/codeql-overview/about-codeql/) does ["variant analysis"](https://codeql.github.com/docs/codeql-overview/about-codeql/#about-variant-analysis) on code to detect problems similar to existing vulnerabilities. |
+| [OSV scan](./.github/workflows/osv-scan.yml) | [Open Source Vulnerabilities (OSV)](https://osv.dev) is a distributed vulnerabilities database for open source projects. |
+| [secrets scan](./.github/workflows/secrets-scan.yml) | Scans repository for strings that look like secrets. Uses the [gitlinks](https://github.com/gitleaks/gitleaks) scanner. |
+| [vulnerability scan](./.github/workflows/vulnerability-scan.yml) | Scans Go code for vulnerabilities using the [`govulncheck` Github Action](https://github.com/Templum/govulncheck-action). |
 
 ## Upgrading
 
