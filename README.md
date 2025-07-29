@@ -90,6 +90,8 @@ The CLI includes a `self` subcommand, which allows for running `syst self upgrad
 
 Run `syst --help` to print the help menu. For each subcommand, i.e. `syst show`, you can also run `--help` to see scoped parameters for that subcommand.
 
+Each [subcommand](./internal/commands/) has a `README.md` file explaining its purpose/usage.
+
 ### Commands
 
 Browse the [commands/ directory](./internal/commands/) to read more about subcommands for this CLI.
