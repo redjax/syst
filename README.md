@@ -57,7 +57,7 @@ curl -LsSf https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts
 For Windows, use:
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.ps1 | iex; Install-Syst -Auto
 ```
 
 ### From Release
