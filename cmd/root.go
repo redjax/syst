@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	// Import your CLI subcommands
+	encodecommand "github.com/redjax/syst/internal/commands/encodeCommand"
 	generatecommand "github.com/redjax/syst/internal/commands/generateCommand"
 	_git "github.com/redjax/syst/internal/commands/gitCommand"
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
@@ -77,6 +78,7 @@ func init() {
 	rootCmd.AddCommand(_git.NewGitCommand())
 	rootCmd.AddCommand(weathercommand.NewWeatherCommand())
 	rootCmd.AddCommand(generatecommand.NewGenerateCommand())
+	rootCmd.AddCommand(encodecommand.NewEncodeCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
