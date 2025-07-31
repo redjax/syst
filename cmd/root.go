@@ -10,6 +10,7 @@ import (
 
 	// Import your CLI subcommands
 	encodecommand "github.com/redjax/syst/internal/commands/encodeCommand"
+	generatecommand "github.com/redjax/syst/internal/commands/generateCommand"
 	_git "github.com/redjax/syst/internal/commands/gitCommand"
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
@@ -76,6 +77,7 @@ func init() {
 	rootCmd.AddCommand(_which.NewWhichCommand())
 	rootCmd.AddCommand(_git.NewGitCommand())
 	rootCmd.AddCommand(weathercommand.NewWeatherCommand())
+	rootCmd.AddCommand(generatecommand.NewGenerateCommand())
 	rootCmd.AddCommand(encodecommand.NewEncodeCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
