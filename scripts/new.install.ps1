@@ -138,22 +138,8 @@ Write-Host "`nsyst installed successfully to $DestExePath"
 $UserPath = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::User)
 
 if ( -not ( $UserPath -split ';' | Where-Object { $_ -eq $InstallPath } ) ) {
-    try {
-        [Environment]::SetEnvironmentVariable('PATH', "$UserPath;$InstallPath", 'User')
-
-        Write-Host "Added '$InstallPath' to user PATH environment variable. Close and reopen your shell for changes to take effect."
-    } catch {
-        Write-Error "Failed to update PATH environment variable: $($_.Exception.Message)"
-        
-        Write-Warning @"
-'$InstallPath' is not in your user PATH environment variable."
-
-"Add it by running this once in PowerShell:"
-    $> [Environment]::SetEnvironmentVariable('PATH', "`$UserPath;`$InstallPath", 'User')
-
-Then close & re-open your shell for changes to take effect.
-"@
-
-        throw $_.Exception
-    }
+    Write-Host "`nNOTE: '$InstallPath' is not in your user PATH environment variable."
+    Write-Host "Add it by running this once in PowerShell:"
+    Write-Host "[Environment]::SetEnvironmentVariable('PATH', `"$UserPath;$InstallPath`", 'User')"
+    Write-Host "Then restart your shell for changes to take effect."
 }
