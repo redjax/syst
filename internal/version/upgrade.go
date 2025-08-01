@@ -152,7 +152,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 	fmt.Fprintf(cmd.ErrOrStderr(),
 		"✅ Upgrade downloaded:\n  %s\n"+
-			"  It will be applied the next time you run the command.\n",
+			"  It will be applied next time you run a syst command, i.e. syst --version.\n",
 		newPath)
 
 	return nil
