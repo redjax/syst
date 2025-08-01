@@ -152,7 +152,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 	fmt.Fprintf(cmd.ErrOrStderr(),
 		"✅ Upgrade downloaded:\n  %s\n"+
-			"  It will be applied the next time you run the command.\n",
+			"  It will be applied next time you run a syst command, i.e. syst --version.\n",
 		newPath)
 
 	return nil
@@ -236,6 +236,7 @@ func copyFile(src, dst string) error {
 func TrySelfUpgrade() {
 	exePath, err := os.Executable()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get executable path: %v\n", err)
 		return
 	}
 
@@ -243,7 +244,23 @@ func TrySelfUpgrade() {
 
 	if _, err := os.Stat(newPath); err == nil {
 		// New file exists: perform replacement
-		if err := os.Rename(newPath, exePath); err == nil {
+
+		if runtime.GOOS == "windows" {
+			// Use Windows-specific updater
+			err := RunWindowsSelfUpgrade(exePath, newPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Syst Windows self-upgrade failed: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "🔁 syst upgraded successfully.\n")
+				// Exit after successful upgrade so new exe is run by RunWindowsSelfUpgrade
+				os.Exit(0)
+			}
+		}
+		errRename := os.Rename(newPath, exePath)
+
+		if errRename != nil {
+			fmt.Fprintf(os.Stderr, "Failed to replace executable: %v\n", errRename)
+		} else {
 			fmt.Fprintf(os.Stderr, "🔁 syst upgraded successfully.\n")
 		}
 	}
