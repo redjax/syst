@@ -141,7 +141,7 @@ if ( -not ( $UserPath -split ';' | Where-Object { $_ -eq $InstallPath } ) ) {
     try {
         [Environment]::SetEnvironmentVariable('PATH', "$UserPath;$InstallPath", 'User')
 
-        Write-Host "Added '$InstallPath' to user PATH environment variable."
+        Write-Host "Added '$InstallPath' to user PATH environment variable. Close and reopen your shell for changes to take effect."
     } catch {
         Write-Error "Failed to update PATH environment variable: $($_.Exception.Message)"
         
@@ -151,7 +151,7 @@ if ( -not ( $UserPath -split ';' | Where-Object { $_ -eq $InstallPath } ) ) {
 "Add it by running this once in PowerShell:"
     $> [Environment]::SetEnvironmentVariable('PATH', "`$UserPath;`$InstallPath", 'User')
 
-Then restart your shell for changes to take effect.
+Then close & re-open your shell for changes to take effect.
 "@
 
         throw $_.Exception
