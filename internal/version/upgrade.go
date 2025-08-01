@@ -236,6 +236,7 @@ func copyFile(src, dst string) error {
 func TrySelfUpgrade() {
 	exePath, err := os.Executable()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to get executable path: %v\n", err)
 		return
 	}
 
@@ -243,7 +244,11 @@ func TrySelfUpgrade() {
 
 	if _, err := os.Stat(newPath); err == nil {
 		// New file exists: perform replacement
-		if err := os.Rename(newPath, exePath); err == nil {
+		errRename := os.Rename(newPath, exePath)
+
+		if errRename != nil {
+			fmt.Fprintf(os.Stderr, "Failed to replace executable: %v\n", errRename)
+		} else {
 			fmt.Fprintf(os.Stderr, "🔁 syst upgraded successfully.\n")
 		}
 	}
