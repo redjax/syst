@@ -20,7 +20,12 @@ func runICMPPing(opts *Options) error {
 	i := 1
 
 	stopSpinner := spinner.StartSpinner("")
-	defer stopSpinner()
+
+	// Defer printing the ping summary and stopping spinner on any exit
+	defer func() {
+		stopSpinner()
+		PrettyPrintPingSummaryTable(opts)
+	}()
 
 	for opts.Count == 0 || i <= opts.Count {
 		select {
@@ -85,7 +90,6 @@ func runICMPPing(opts *Options) error {
 	if opts.LogToFile && opts.Logger != nil {
 		opts.Logger.Printf("[INFO] Finished ping to %s", opts.Target)
 	}
-	stopSpinner()
-	PrettyPrintPingSummaryTable(opts)
+
 	return nil
 }
