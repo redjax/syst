@@ -16,6 +16,7 @@ func (m UIModel) buildTable() t.Model {
 		"__selected":  {},
 		"[x]":         {},
 		"_selected":   {},
+		"rowid":       {},
 	}
 
 	// Filter DB columns (trim & remove reserved)
@@ -73,12 +74,12 @@ func (m UIModel) buildTable() t.Model {
 			if v, ok := rowData[colName]; ok && v != nil {
 				val = fmt.Sprintf("%v", v)
 			}
-			// bracket-highlight the currently selected cell
-			if colIdx >= 1 && colIdx == m.selectedCol && rowIdx == m.selectedIndex {
+			if (colIdx+1) == m.selectedCol && rowIdx == m.selectedIndex {
 				val = "[" + val + "]"
 			}
 			row[colName] = val
 		}
+
 		tRows = append(tRows, t.NewRow(row))
 	}
 
