@@ -136,7 +136,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedCol--
 					m.tableComp = m.buildTable()
 				}
-
 			case "right", "l":
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
@@ -161,6 +160,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedRows[m.selectedIndex] = true
 				}
 				m.tableComp = m.buildTable()
+
 			case "e":
 				// expand cell
 				if m.selectedIndex >= 0 && m.selectedIndex < len(m.rows) &&
@@ -180,6 +180,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.mode = modeExpandCell
 					}
 				}
+
 			case "n":
 				if len(m.rows) == m.limit {
 					m.offset += m.limit

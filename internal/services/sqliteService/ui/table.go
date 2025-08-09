@@ -79,6 +79,7 @@ func (m UIModel) buildTable() t.Model {
 			}
 			row[colName] = val
 		}
+
 		tRows = append(tRows, t.NewRow(row))
 	}
 
