@@ -64,7 +64,10 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.String() == "esc" {
 				m.queryInput.Blur()
 			}
-			return m, nil
+			// let the viewport handle scroll keys
+			var cmd tea.Cmd
+			m.vp, cmd = m.vp.Update(msg)
+			return m, cmd
 		}
 
 		// Normal key handling per mode
@@ -85,7 +88,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				if len(m.tables) > 0 {
 					m.tableName = m.tables[m.tableIndex]
-					// Query does NOT include any __selected col
 					m.query = fmt.Sprintf("SELECT rowid, * FROM %s", m.tableName)
 					m.offset = 0
 					m.loading = true
@@ -139,6 +141,10 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedCol++
 					m.tableComp = m.buildTable()
 				}
+			case "/":
+				// focus the query input for typing a new SQL
+				m.queryInput.Focus()
+				return m, nil
 
 			case "/":
 				// focus the query input for typing a new SQL
@@ -153,7 +159,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedRows[m.selectedIndex] = true
 				}
 				m.tableComp = m.buildTable()
-
 			case "e":
 				// expand cell
 				if m.selectedIndex >= 0 && m.selectedIndex < len(m.rows) &&
@@ -173,14 +178,12 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.mode = modeExpandCell
 					}
 				}
-
 			case "n":
 				if len(m.rows) == m.limit {
 					m.offset += m.limit
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
-
 			case "p":
 				if m.offset >= m.limit {
 					m.offset -= m.limit
@@ -217,7 +220,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, m.deleteRowsCmd(rowIDs)
 					}
 				}
-
 			default:
 				m.dCount = 0
 			}
