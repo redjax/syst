@@ -15,6 +15,7 @@ import (
 	pingo "github.com/redjax/syst/internal/commands/pingCommand"
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
+	sqlitecommand "github.com/redjax/syst/internal/commands/sqliteCommand"
 	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
 	weathercommand "github.com/redjax/syst/internal/commands/weatherCommand"
 	_which "github.com/redjax/syst/internal/commands/whichCommand"
@@ -79,6 +80,7 @@ func init() {
 	rootCmd.AddCommand(weathercommand.NewWeatherCommand())
 	rootCmd.AddCommand(generatecommand.NewGenerateCommand())
 	rootCmd.AddCommand(encodecommand.NewEncodeCommand())
+	rootCmd.AddCommand(sqlitecommand.NewSqliteCmd())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
