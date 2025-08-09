@@ -125,19 +125,25 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "up", "k":
 				if m.selectedIndex > 0 {
 					m.selectedIndex--
+					m.tableComp = m.buildTable()
 				}
 			case "down", "j":
 				if m.selectedIndex < len(m.rows)-1 {
 					m.selectedIndex++
+					m.tableComp = m.buildTable()
 				}
 			case "left", "h":
-				if m.selectedCol > 0 {
+				if m.selectedCol > 1 {
 					m.selectedCol--
+					m.tableComp = m.buildTable()
 				}
+
 			case "right", "l":
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
+					m.tableComp = m.buildTable()
 				}
+
 			case "/":
 				// focus the query input for typing a new SQL
 				m.queryInput.Focus()
@@ -264,7 +270,12 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedIndex = 0
 		}
 		if m.selectedCol >= len(m.columns) {
-			m.selectedCol = 0
+			for i, colName := range m.columns {
+				if colName != "rowid" && colName != "__ui_selected__" {
+					m.selectedCol = i
+					break
+				}
+			}
 		}
 		return m, nil
 
