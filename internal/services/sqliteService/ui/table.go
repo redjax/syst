@@ -2,36 +2,47 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	t "github.com/evertras/bubble-table/table"
 )
 
-func (m *UIModel) buildTable() t.Model {
-	// 1. Filter m.columns so no “[x]” or “__selected”
+func (m UIModel) buildTable() t.Model {
+	const uiCheckboxCol = "__ui_selected__"
+
+	// reserved keys we never want to show as DB columns
+	reserved := map[string]struct{}{
+		uiCheckboxCol: {},
+		"__selected":  {},
+		"[x]":         {},
+		"_selected":   {},
+	}
+
+	// Filter DB columns (trim & remove reserved)
 	filteredCols := []string{}
+	seen := make(map[string]bool)
 	for _, c := range m.columns {
-		if c != "__selected" && c != "[x]" && c != "_selected" {
-			filteredCols = append(filteredCols, c)
+		n := strings.TrimSpace(c)
+		if n == "" {
+			continue
 		}
+		if _, ok := reserved[n]; ok {
+			continue
+		}
+		if seen[n] {
+			continue
+		}
+		seen[n] = true
+		filteredCols = append(filteredCols, n)
 	}
 
-	// 2. Clean each row so no “[x]” or “__selected” keys exist
-	cleanedRows := make([]map[string]interface{}, len(m.rows))
-	for i, row := range m.rows {
-		clean := make(map[string]interface{}, len(row))
-		for k, v := range row {
-			if k != "__selected" && k != "[x]" && k != "_selected" {
-				clean[k] = v
-			}
-		}
-		cleanedRows[i] = clean
-	}
-
-	// 3. Calc width
-	totalCols := len(filteredCols) + 1
-	if totalCols == 0 {
+	// If there's nothing to show, give an empty model
+	if len(filteredCols) == 0 {
 		return t.New(nil)
 	}
+
+	// widths
+	totalCols := len(filteredCols) + 1 // +1 for checkbox column
 	minColWidth := 8
 	usableWidth := m.termWidth - totalCols
 	colWidth := usableWidth / totalCols
@@ -39,21 +50,22 @@ func (m *UIModel) buildTable() t.Model {
 		colWidth = minColWidth
 	}
 
-	// 4. Define columns: one checkbox + the real DB columns
-	cols := []t.Column{t.NewColumn("__selected", "[x]", minColWidth)}
+	// column defs: UI checkbox first (label is a space)
+	cols := []t.Column{t.NewColumn(uiCheckboxCol, " ", minColWidth)}
 	for _, c := range filteredCols {
 		cols = append(cols, t.NewColumn(c, c, colWidth))
 	}
 
-	// 5. Build table rows
+	// rows
 	var tRows []t.Row
-	for rowIdx, rowData := range cleanedRows {
+	for rowIdx, rowData := range m.rows {
 		row := t.RowData{}
 
+		// checkbox
 		if m.selectedRows[rowIdx] {
-			row["__selected"] = "[x]"
+			row[uiCheckboxCol] = "[x]"
 		} else {
-			row["__selected"] = "[ ]"
+			row[uiCheckboxCol] = "[ ]"
 		}
 
 		for colIdx, colName := range filteredCols {
@@ -61,15 +73,17 @@ func (m *UIModel) buildTable() t.Model {
 			if v, ok := rowData[colName]; ok && v != nil {
 				val = fmt.Sprintf("%v", v)
 			}
-			// highlight current cell
+			// bracket-highlight the currently selected cell
 			if colIdx == m.selectedCol && rowIdx == m.selectedIndex {
 				val = "[" + val + "]"
 			}
 			row[colName] = val
 		}
-
 		tRows = append(tRows, t.NewRow(row))
 	}
 
-	return t.New(cols).WithRows(tRows).SelectableRows(true).Focused(true)
+	return t.New(cols).
+		WithRows(tRows).
+		SelectableRows(true).
+		Focused(true)
 }
