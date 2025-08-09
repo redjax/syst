@@ -74,7 +74,7 @@ func (m UIModel) buildTable() t.Model {
 				val = fmt.Sprintf("%v", v)
 			}
 			// bracket-highlight the currently selected cell
-			if colIdx == m.selectedCol && rowIdx == m.selectedIndex {
+			if colIdx >= 1 && colIdx == m.selectedCol && rowIdx == m.selectedIndex {
 				val = "[" + val + "]"
 			}
 			row[colName] = val
