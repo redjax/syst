@@ -24,6 +24,9 @@ func (m UIModel) viewLauncher() string {
 	if m.errMsg != "" {
 		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
 	}
+	if len(m.tables) == 0 {
+		b.WriteString("(no tables)\n\n")
+	}
 	for i, tbl := range m.tables {
 		cursor := "  "
 		if i == m.tableIndex {
@@ -31,30 +34,35 @@ func (m UIModel) viewLauncher() string {
 		}
 		b.WriteString(fmt.Sprintf("%s %s\n", cursor, tbl))
 	}
-	b.WriteString("\n↑/↓: move | Enter: open | q: quit\n")
+	b.WriteString("\n↑/↓ (k/j): move | Enter: open | dd: delete table | q: quit\n")
 	return b.String()
 }
 
 func (m UIModel) viewTable() string {
 	var b strings.Builder
+
 	b.WriteString(fmt.Sprintf("Table: %s (Esc back)\n", m.tableName))
 	b.WriteString("SQL> " + m.queryInput.View() + "\n\n")
+
 	if m.errMsg != "" {
 		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
 	}
+
 	if m.loading {
 		b.WriteString("Loading data...\n")
 		return b.String()
 	}
+
+	// table component view
 	b.WriteString(m.tableComp.View())
-	b.WriteString("\nSpace: select row | e: expand cell | n/p: page | d: delete | q: quit\n")
+	b.WriteString("\nSpace: select row | e: expand cell | n/p: page | dd: delete | /: query | q: quit\n")
 	return b.String()
 }
 
 func (m UIModel) viewExpandedCell() string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("Expanded value - row %d, column %q\n\n", m.expandRow+1, m.expandCol))
-	b.WriteString(m.expandVal + "\n")
+	b.WriteString(m.vp.View())
 	b.WriteString("\n[esc] to return\n")
 	return b.String()
 }
