@@ -6,35 +6,25 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// Update handles all TUI messages and user input.
 func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
-		// Quit from launcher
-		if m.mode == modeLauncher && (msg.Type == tea.KeyCtrlC || msg.String() == "q") {
-			return m, tea.Quit
-		}
 
-		// Query input mode
-		if m.inQueryInput {
-			var cmd tea.Cmd
-			m.queryInput, cmd = m.queryInput.Update(msg)
-			if msg.Type == tea.KeyEnter {
-				m.query = m.queryInput.Value()
-				m.offset = 0
-				m.selectedIndex = 0
-				m.inQueryInput = false
-				m.loading = true
-				return m, m.runQueryCmd()
-			}
+		// -------- Expand Mode --------
+		if m.mode == modeExpandCell {
 			if msg.Type == tea.KeyEsc {
-				m.inQueryInput = false
+				m.mode = modeTable
 			}
-			return m, cmd
+			return m, nil
 		}
 
-		// Launcher mode navigation
+		// -------- Launcher Mode --------
 		if m.mode == modeLauncher {
+			if msg.Type == tea.KeyCtrlC || msg.String() == "q" {
+				return m, tea.Quit
+			}
 			switch msg.String() {
 			case "up", "k":
 				if m.tableIndex > 0 {
@@ -47,81 +37,138 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				if len(m.tables) > 0 {
 					m.tableName = m.tables[m.tableIndex]
+					// Query does NOT include any __selected col
 					m.query = fmt.Sprintf("SELECT rowid, * FROM %s", m.tableName)
 					m.offset = 0
-					m.mode = modeTable
 					m.loading = true
+					m.mode = modeTable
 					return m, m.runQueryCmd()
 				}
 			}
 			return m, nil
 		}
 
-		// Table mode navigation
+		// -------- Table Mode --------
 		if m.mode == modeTable {
-			// Return to launcher with Esc
+			// Esc goes back to launcher
 			if msg.Type == tea.KeyEsc {
 				m.mode = modeLauncher
 				m.loading = true
 				return m, m.loadTablesCmd()
 			}
+
+			// Forward to bubble-table for its own internal navigation
+			var tblCmd tea.Cmd
+			m.tableComp, tblCmd = m.tableComp.Update(msg)
+
 			switch msg.String() {
 			case "q", "ctrl+c":
 				return m, tea.Quit
-			case "j", "down":
-				if m.selectedIndex < len(m.rows)-1 {
-					m.selectedIndex++
-				}
-				m.dCount = 0
-			case "k", "up":
+
+			case "up", "k":
 				if m.selectedIndex > 0 {
 					m.selectedIndex--
 				}
-				m.dCount = 0
+			case "down", "j":
+				if m.selectedIndex < len(m.rows)-1 {
+					m.selectedIndex++
+				}
+			case "left", "h":
+				if m.selectedCol > 0 {
+					m.selectedCol--
+				}
+			case "right", "l":
+				if m.selectedCol < len(m.columns)-1 {
+					m.selectedCol++
+				}
+
+			case " ":
+				// Toggle selection checkbox for the row under cursor (space only)
+				if m.selectedRows[m.selectedIndex] {
+					delete(m.selectedRows, m.selectedIndex)
+				} else {
+					m.selectedRows[m.selectedIndex] = true
+				}
+				m.tableComp = m.buildTable()
+
+			case "e":
+				// expand current cell value
+				if m.selectedIndex >= 0 && m.selectedIndex < len(m.rows) &&
+					m.selectedCol >= 0 && m.selectedCol < len(m.columns) {
+					colKey := m.columns[m.selectedCol]
+					if val, ok := m.rows[m.selectedIndex][colKey]; ok && val != nil {
+						m.expandRow = m.selectedIndex
+						m.expandCol = colKey
+						m.expandVal = fmt.Sprintf("%v", val)
+						m.mode = modeExpandCell
+					}
+				}
+
 			case "n":
 				if len(m.rows) == m.limit {
 					m.offset += m.limit
-					m.selectedIndex = 0
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
+
 			case "p":
 				if m.offset >= m.limit {
 					m.offset -= m.limit
-					m.selectedIndex = 0
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
-			case "enter":
-				m.inQueryInput = true
-				m.queryInput.SetValue(m.query)
-				m.queryInput.Focus()
+
 			case "d":
 				m.dCount++
 				if m.dCount == 2 {
-					m.handleDelete()
+					m.handleDelete(m.selectedIndex)
 					m.dCount = 0
+					m.loading = true
 					return m, m.runQueryCmd()
 				}
+
 			default:
 				m.dCount = 0
 			}
+
+			return m, tblCmd
 		}
 
+	// -------- Query Results Loaded --------
 	case queryResultMsg:
-		m.columns = msg.columns
+		// Filter columns on receiving new query result
+		filtered := []string{}
+		for _, c := range msg.columns {
+			if c != "__selected" && c != "[x]" && c != "_selected" {
+				filtered = append(filtered, c)
+			}
+		}
+		m.columns = filtered
 		m.rows = msg.rows
 		m.loading = false
+		m.tableComp = m.buildTable()
 		if m.selectedIndex >= len(m.rows) {
-			m.selectedIndex = max(0, len(m.rows)-1)
+			m.selectedIndex = 0
+		}
+		if m.selectedCol >= len(m.columns) {
+			m.selectedCol = 0
 		}
 		return m, nil
 
+	// -------- Tables List Loaded --------
 	case tablesLoadedMsg:
 		m.tables = msg
 		m.loading = false
 		return m, nil
 
+	// -------- Terminal Resize --------
+	case tea.WindowSizeMsg:
+		m.termWidth = msg.Width
+		m.termHeight = msg.Height
+		m.tableComp = m.buildTable()
+		return m, nil
+
+	// -------- Async Error --------
 	case error:
 		m.errMsg = msg.Error()
 		m.loading = false
@@ -131,22 +178,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *UIModel) handleDelete() {
-	if m.selectedIndex < len(m.rows) {
-		row := m.rows[m.selectedIndex]
-		if rid, ok := row["rowid"].(int64); ok {
-			if err := m.svc.DeleteRow(m.tableName, rid); err != nil {
-				m.errMsg = fmt.Sprintf("Delete error: %v", err)
-			}
-		} else {
-			m.errMsg = "No rowid found"
+// handleDelete deletes a row by index from m.rows
+func (m *UIModel) handleDelete(rowIdx int) {
+	if rowIdx < 0 || rowIdx >= len(m.rows) {
+		m.errMsg = "No row selected"
+		return
+	}
+	if rid, ok := m.rows[rowIdx]["rowid"].(int64); ok {
+		if err := m.svc.DeleteRow(m.tableName, rid); err != nil {
+			m.errMsg = fmt.Sprintf("Delete error: %v", err)
 		}
+	} else {
+		m.errMsg = "No rowid found"
 	}
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
