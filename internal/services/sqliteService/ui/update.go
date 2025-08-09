@@ -114,10 +114,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.loadTablesCmd()
 			}
 
-			// Keyboard navigation for the table component
-			var tblCmd tea.Cmd
-			m.tableComp, tblCmd = m.tableComp.Update(msg)
-
 			switch msg.String() {
 			case "q", "ctrl+c":
 				return m, tea.Quit
@@ -133,11 +129,10 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.tableComp = m.buildTable()
 				}
 			case "left", "h":
-				if m.selectedCol > 1 {
+				if m.selectedCol > 1 { // skip checkbox col at index 0
 					m.selectedCol--
 					m.tableComp = m.buildTable()
 				}
-
 			case "right", "l":
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
@@ -157,10 +152,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedRows[m.selectedIndex] = true
 				}
 				m.tableComp = m.buildTable()
+
 			case "e":
 				// expand cell
 				if m.selectedIndex >= 0 && m.selectedIndex < len(m.rows) &&
-					m.selectedCol >= 0 && m.selectedCol < len(m.columns) {
+					m.selectedCol >= 1 && m.selectedCol < len(m.columns) {
 					colKey := m.columns[m.selectedCol]
 					if val, ok := m.rows[m.selectedIndex][colKey]; ok && val != nil {
 						m.expandRow = m.selectedIndex
@@ -169,7 +165,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 						// prepare viewport content
 						m.vp.SetContent(m.expandVal)
-						// resize viewport if we have size info
 						if m.termWidth > 0 && m.termHeight > 0 {
 							m.vp.Width = m.termWidth
 							m.vp.Height = m.termHeight - 6
@@ -177,6 +172,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.mode = modeExpandCell
 					}
 				}
+
 			case "n":
 				if len(m.rows) == m.limit {
 					m.offset += m.limit
@@ -192,7 +188,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "d":
 				m.dCount++
 				if m.dCount == 2 {
-					// collect rowids to delete
 					var rowIDs []int64
 					if len(m.selectedRows) > 0 {
 						for idx := range m.selectedRows {
@@ -204,10 +199,8 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 								}
 							}
 						}
-						// clear selection after scheduling delete
 						m.selectedRows = make(map[int]bool)
 					} else {
-						// delete the highlighted row
 						if m.selectedIndex >= 0 && m.selectedIndex < len(m.rows) {
 							if v, ok := m.rows[m.selectedIndex]["rowid"]; ok {
 								if id, ok := toInt64(v); ok {
@@ -226,7 +219,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.dCount = 0
 			}
 
-			return m, tblCmd
+			return m, nil
 		}
 
 	// -------- Query Results Loaded --------
@@ -237,6 +230,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"__selected":      {},
 			"[x]":             {},
 			"_selected":       {},
+			"rowid":           {}, // exclude from visible columns
 		}
 		filtered := []string{}
 		for _, c := range msg.columns {
@@ -266,17 +260,14 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.tableComp = m.buildTable()
 
+		// Clamp selected index and column within valid bounds
 		if m.selectedIndex >= len(m.rows) {
 			m.selectedIndex = 0
 		}
-		if m.selectedCol >= len(m.columns) {
-			for i, colName := range m.columns {
-				if colName != "rowid" && colName != "__ui_selected__" {
-					m.selectedCol = i
-					break
-				}
-			}
+		if m.selectedCol < 1 || m.selectedCol >= len(m.columns) {
+			m.selectedCol = 1
 		}
+
 		return m, nil
 
 	case deleteDoneMsg:
