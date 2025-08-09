@@ -102,3 +102,16 @@ func (s *SQLiteService) GetTables() ([]string, error) {
 	}
 	return tables, nil
 }
+
+// DropTable drops a table by name
+func (s *SQLiteService) DropTable(table string) error {
+	if strings.TrimSpace(table) == "" {
+		return fmt.Errorf("table name cannot be empty")
+	}
+	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", table)
+	_, err := s.db.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to drop table %s: %w", table, err)
+	}
+	return nil
+}

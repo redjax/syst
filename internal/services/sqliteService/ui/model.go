@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	t "github.com/evertras/bubble-table/table"
 	sqliteservice "github.com/redjax/syst/internal/services/sqliteService"
@@ -18,31 +19,43 @@ const (
 )
 
 type UIModel struct {
-	svc           *sqliteservice.SQLiteService
-	mode          viewMode
-	tableName     string
-	tables        []string
-	tableIndex    int
+	// service
+	svc *sqliteservice.SQLiteService
+
+	// mode / navigation
+	mode       viewMode
+	tableName  string
+	tables     []string
+	tableIndex int
+
+	// query & pagination
 	query         string
 	limit, offset int
-	columns       []string
-	rows          []map[string]interface{}
 
-	// Selection tracking
-	selectedIndex int          // current selected row index
-	selectedCol   int          // current selected column index
-	selectedRows  map[int]bool // multi-select checkboxes
+	// DB results (clean DB-only column names)
+	columns []string
+	rows    []map[string]interface{}
 
-	dCount     int
+	// selection / cursor
+	selectedIndex int
+	selectedCol   int
+	selectedRows  map[int]bool
+
+	// quick state
+	dCount  int
+	errMsg  string
+	loading bool
+
+	// query input (focus on '/')
 	queryInput textinput.Model
-	errMsg     string
-	loading    bool
 
-	// Expand cell view
+	// expand (scrollable)
 	expandRow int
 	expandCol string
 	expandVal string
+	vp        viewport.Model
 
+	// table component and terminal size
 	tableComp  t.Model
 	termWidth  int
 	termHeight int
@@ -51,17 +64,21 @@ type UIModel struct {
 func NewUIModel(svc *sqliteservice.SQLiteService, startTable string) UIModel {
 	ti := textinput.New()
 	ti.Placeholder = "Enter SQL query"
-	ti.CharLimit = 256
+	ti.CharLimit = 1024
 	ti.Width = 50
+	ti.Blur()
 
+	// minimal viewport until we get window size
+	vp := viewport.Model{}
 	m := UIModel{
 		svc:           svc,
 		limit:         20,
 		offset:        0,
 		queryInput:    ti,
+		selectedRows:  make(map[int]bool),
 		selectedIndex: 0,
 		selectedCol:   0,
-		selectedRows:  make(map[int]bool),
+		vp:            vp,
 	}
 
 	if startTable != "" {
@@ -71,11 +88,11 @@ func NewUIModel(svc *sqliteservice.SQLiteService, startTable string) UIModel {
 	} else {
 		m.mode = modeLauncher
 	}
-
 	return m
 }
 
 func (m UIModel) Init() tea.Cmd {
+	// start by loading tables or running query depending on mode
 	if m.mode == modeLauncher {
 		return m.loadTablesCmd()
 	}
