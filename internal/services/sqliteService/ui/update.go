@@ -136,11 +136,13 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedCol--
 					m.tableComp = m.buildTable()
 				}
+
 			case "right", "l":
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
 					m.tableComp = m.buildTable()
 				}
+
 			case "/":
 				// focus the query input for typing a new SQL
 				m.queryInput.Focus()
