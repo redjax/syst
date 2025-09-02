@@ -3,9 +3,9 @@
 ## Architecture Overview
 
 **syst** is a cross-platform Go CLI utility with a modular command/service architecture. The core pattern follows:
-- `cmd/` - Root Cobra command definition and entrypoint
-- `internal/commands/` - Command implementations organized by domain 
-- `internal/services/` - Business logic services supporting commands
+- `cmd/` - Contains `root.go` (Cobra CLI root command) and `entrypoint/main.go` (application entrypoint)
+- `internal/commands/` - Cobra subcommand implementations that delegate to services
+- `internal/services/` - Business logic encapsulation, called by commands
 - `internal/utils/` - Shared utilities and helpers
 
 ### Command Registration Pattern
@@ -18,9 +18,9 @@ rootCmd.AddCommand(_git.NewGitCommand())
 ```
 
 ### Service-Command Separation
-Commands act as thin CLI adapters that delegate to services:
+Commands in `internal/commands/` are thin CLI adapters that delegate to services in `internal/services/`:
 - **Commands** handle CLI concerns: flags, help text, argument parsing
-- **Services** contain business logic and can be unit tested independently
+- **Services** contain business logic and are independently testable
 - Example: `pingCommand.NewPingCommand()` → `pingService.RunPing()`
 
 ## Key Conventions
@@ -57,9 +57,9 @@ Build scripts inject version info via ldflags:
 ## Development Workflows
 
 ### Building
-Use provided build scripts instead of raw `go build`:
-- **Linux/Mac**: `./scripts/build/build.sh --bin-name syst --build-os linux`
-- **Windows**: `.\scripts\build\build.ps1 -BinName syst -BuildOS windows`
+Always build to the `build/` directory for testing, debugging, or distribution:
+- **Linux/Mac**: `./scripts/build/build.sh --bin-name syst --build-os linux --build-output-dir build/`
+- **Windows**: `.\scripts\build\build.ps1 -BinName syst -BuildOS windows -BuildOutputDir build\`
 - **Quick dev build**: `go build -o build/syst ./cmd/entrypoint`
 
 Default entrypoint: `./cmd/entrypoint/main.go`
@@ -69,7 +69,7 @@ Default entrypoint: `./cmd/entrypoint/main.go`
 2. Implement `New*Command() *cobra.Command` factory
 3. Create corresponding service in `internal/services/` if needed
 4. Register in `cmd/root.go` init function
-5. Add README.md explaining usage
+5. Services encapsulate all business logic while commands handle CLI interface
 
 ### Service Structure Patterns
 - **Single-file services**: Simple utilities like `whichCommand` 
