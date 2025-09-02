@@ -20,6 +20,7 @@ func NewGitCommand() *cobra.Command {
 	cmd.AddCommand(NewGitBlameCommand())
 	cmd.AddCommand(NewGitBranchesCommand())
 	cmd.AddCommand(NewGitCompareCommand())
+	cmd.AddCommand(NewGitContributorsCommand())
 
 	return cmd
 }
