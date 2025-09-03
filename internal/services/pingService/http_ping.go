@@ -23,7 +23,12 @@ func defaultHTTPPing(opts *Options) error {
 
 	// Prepare & defer spinner
 	stopSpinner := spinner.StartSpinner("")
-	defer stopSpinner()
+	
+	// Defer printing the ping summary and stopping spinner on any exit
+	defer func() {
+		stopSpinner()
+		PrettyPrintPingSummaryTable(opts)
+	}()
 
 	for opts.Count == 0 || i <= opts.Count {
 		select {
@@ -118,15 +123,9 @@ func defaultHTTPPing(opts *Options) error {
 		}
 
 		if !sleepOrCancel(opts.Ctx, opts.Sleep) {
-			stopSpinner() // Stop the spinner
 			return nil
 		}
 	}
-
-	stopSpinner() // Stop the spinner
-
-	// Print latency summary after finishing
-	PrettyPrintPingSummaryTable(opts)
 
 	return nil
 }
