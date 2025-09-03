@@ -23,6 +23,7 @@ func NewGitCommand() *cobra.Command {
 	cmd.AddCommand(NewGitContributorsCommand())
 	cmd.AddCommand(NewGitDiffCommand())
 	cmd.AddCommand(NewGitFilesCommand())
+	cmd.AddCommand(NewGitHealthCommand())
 
 	return cmd
 }
