@@ -57,10 +57,10 @@ Build scripts inject version info via ldflags:
 ## Development Workflows
 
 ### Building
-Always build to the `build/` directory for testing, debugging, or distribution:
-- **Linux/Mac**: `./scripts/build/build.sh --bin-name syst --build-os linux --build-output-dir build/`
-- **Windows**: `.\scripts\build\build.ps1 -BinName syst -BuildOS windows -BuildOutputDir build\`
-- **Quick dev build**: `go build -o build/syst ./cmd/entrypoint`
+Always build to the `dist/` directory for testing, debugging, or distribution:
+- **Linux/Mac**: `./scripts/build/build.sh --bin-name syst --build-os linux --build-output-dir dist/`
+- **Windows**: `.\scripts\build\build.ps1 -BinName syst -BuildOS windows -BuildOutputDir dist\`
+- **Quick dev build**: `go build -o dist/syst ./cmd/entrypoint`
 
 Default entrypoint: `./cmd/entrypoint/main.go`
 
