@@ -134,7 +134,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.tableComp = m.buildTable()
 				}
 			case "right", "l":
-				if m.selectedCol < len(m.columns)-1 {
+				if m.selectedCol < len(m.columns) {
 					m.selectedCol++
 					m.tableComp = m.buildTable()
 				}
