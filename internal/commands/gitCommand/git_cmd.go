@@ -17,6 +17,15 @@ func NewGitCommand() *cobra.Command {
 	cmd.AddCommand(NewGitSparseCloneCommand())
 	cmd.AddCommand(NewGitInfoCommand())
 	cmd.AddCommand(NewGitActivityCommand())
+	cmd.AddCommand(NewGitBlameCommand())
+	cmd.AddCommand(NewGitBranchesCommand())
+	cmd.AddCommand(NewGitCompareCommand())
+	cmd.AddCommand(NewGitContributorsCommand())
+	cmd.AddCommand(NewGitDiffCommand())
+	cmd.AddCommand(NewGitFilesCommand())
+	cmd.AddCommand(NewGitHealthCommand())
+	cmd.AddCommand(NewGitHistoryCommand())
+	cmd.AddCommand(NewGitSearchCommand())
 
 	return cmd
 }
