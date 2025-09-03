@@ -24,6 +24,7 @@ func NewGitCommand() *cobra.Command {
 	cmd.AddCommand(NewGitDiffCommand())
 	cmd.AddCommand(NewGitFilesCommand())
 	cmd.AddCommand(NewGitHealthCommand())
+	cmd.AddCommand(NewGitHistoryCommand())
 
 	return cmd
 }
