@@ -91,7 +91,7 @@ func (i contributorItem) FilterValue() string { return i.contributor.Name }
 func (i contributorItem) Title() string {
 	commits := i.contributor.TotalCommits
 	percentage := i.contributor.Percentage
-	return fmt.Sprintf("%s (%d commits, %.1f%%)", i.contributor.Name, commits, percentage)
+	return fmt.Sprintf("%s <%s> (%d commits, %.1f%%)", i.contributor.Name, i.contributor.Email, commits, percentage)
 }
 func (i contributorItem) Description() string {
 	lastActive := i.contributor.LastCommit.Format("2006-01-02")
