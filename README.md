@@ -36,6 +36,7 @@
   - [Install script](#install-script)
   - [From Release](#from-release)
   - [Build Locally](#build-locally)
+- [Install shell completion](#install-shell-completion)
 - [Security Scans](#security-scans)
 - [Upgrading](#upgrading)
 - [Usage](#usage)
@@ -68,6 +69,25 @@ Install a release from the [releases page](https://github.com/redjax/syst/releas
 ### Build Locally
 
 Clone this repository and run [one of the build scripts](./scripts/build/).
+
+## Install shell completion
+
+To enable tab-completion for `syst` commands, run one of the following:
+
+- **Bash**: `syst completion bash > ~/.local/share/bash-completion/completions/syst`
+- **Zsh**: `syst completion zsh > ~/.local/share/zsh/completions/_syst`
+  - Add the completion to your `$fpath` in your `.zshrc`:
+    - `fpath=(~/.local/share/zsh/completions $fpath)`
+    - Then initialize your completions by adding these lines to `~/.zshrc`:
+      - `autoload -U compinit`
+      - `compinit`
+- **Powershell**: `syst completion powershell > syst.ps1`
+  - Open your `$PROFILE` path by running: `ii (Split-Path -Path $PROFILE -Parent)`
+  - Create a directory, i.e. `completions/`
+  - Move the `syst.ps1` into the `completions/` directory
+  - In your `$PROFILE`, source the completions by adding the following:
+    - `$PROFILE_PATH = (Split-Path -Path $PROFILE -Parent)`
+    - `. "$($PROFILE_PATH)/completions/syst.ps1`
 
 ## Security Scans
 
