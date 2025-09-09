@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -96,8 +97,7 @@ type model struct {
 	report   HealthReport
 	err      error
 	loading  bool
-	width    int
-	height   int
+	tuiHelper *terminal.ResponsiveTUIHelper
 	sections []string
 	selected int
 }
@@ -152,8 +152,7 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.tuiHelper.HandleWindowSizeMsg(msg)
 		return m, nil
 
 	case reportLoadedMsg:
@@ -1060,6 +1059,7 @@ func formatBytes(bytes int64) string {
 func RunHealthCheck() error {
 	m := model{
 		loading: true,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())

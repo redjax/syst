@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -59,8 +60,7 @@ type model struct {
 	selectedResult *SearchResult
 	loading        bool
 	err            error
-	width          int
-	height         int
+	tuiHelper *terminal.ResponsiveTUIHelper
 }
 
 type searchCompletedMsg struct {
@@ -373,11 +373,10 @@ func searchAuthors(repo *git.Repository, query string) ([]SearchResult, error) {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.tuiHelper.HandleWindowSizeMsg(msg)
 		m.searchInput.Width = msg.Width - 4
-		m.resultsList.SetWidth(msg.Width)
-		m.resultsList.SetHeight(msg.Height - 8)
+		m.resultsList.SetWidth(m.tuiHelper.GetWidth())
+		m.resultsList.SetHeight(m.tuiHelper.GetHeight() - 8)
 		return m, nil
 
 	case searchCompletedMsg:

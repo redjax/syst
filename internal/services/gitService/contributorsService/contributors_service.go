@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type ViewMode int
@@ -77,8 +78,7 @@ type model struct {
 	overallStats    OverallStats
 	contributorList list.Model
 	viewMode        ViewMode
-	width           int
-	height          int
+	tuiHelper       *terminal.ResponsiveTUIHelper
 	err             error
 	loading         bool
 }
@@ -149,10 +149,10 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.contributorList.SetWidth(msg.Width)
-		m.contributorList.SetHeight(msg.Height - 10)
+		m.tuiHelper.HandleWindowSizeMsg(msg)
+		width, height := m.tuiHelper.GetSize()
+		m.contributorList.SetWidth(width)
+		m.contributorList.SetHeight(height - 10)
 		return m, nil
 
 	case dataLoadedMsg:
@@ -227,11 +227,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.loading {
-		return "\n  Analyzing contributor data...\n"
+		return m.tuiHelper.CenterContent("Analyzing contributor data...")
 	}
 
 	if m.err != nil {
-		return errorStyle.Render(fmt.Sprintf("\n  Error: %v\n", m.err))
+		return m.tuiHelper.CenterContent(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
 	}
 
 	switch m.viewMode {
@@ -262,7 +262,7 @@ func (m model) renderContributorList() string {
 	help := helpStyle.Render("↑/↓: navigate • enter: details • t: timeline • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderOverallStats() string {
@@ -297,7 +297,7 @@ func (m model) renderOverallStats() string {
 
 func (m model) renderContributorDetail() string {
 	if m.selectedIndex >= len(m.contributors) {
-		return "No contributor selected"
+		return m.tuiHelper.CenterContent("No contributor selected")
 	}
 
 	contributor := m.contributors[m.selectedIndex]
@@ -321,7 +321,7 @@ func (m model) renderContributorDetail() string {
 	help := helpStyle.Render("↑/↓: switch contributor • t: timeline • esc: back • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderContributorStats(contributor ContributorData) string {
@@ -466,7 +466,7 @@ func (m model) renderTimelineView() string {
 	help := helpStyle.Render("↑/↓: navigate • t: details • esc: back • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func loadContributorData() tea.Msg {
@@ -667,6 +667,7 @@ func RunContributorsAnalysis() error {
 		contributorList: contributorList,
 		viewMode:        ContributorListView,
 		loading:         true,
+		tuiHelper:       terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())

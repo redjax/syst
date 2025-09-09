@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type ViewMode int
@@ -87,8 +88,7 @@ type model struct {
 	contributorIndex int
 	err              error
 	loading          bool
-	width            int
-	height           int
+	tuiHelper        *terminal.ResponsiveTUIHelper
 }
 
 type dataLoadedMsg struct {
@@ -124,6 +124,16 @@ var (
 			Foreground(lipgloss.Color("#FF5F87"))
 )
 
+// Helper function to get dynamic section style based on terminal width
+func (m model) getSectionStyle() lipgloss.Style {
+	return m.tuiHelper.GetResponsiveSectionStyle(sectionStyle)
+}
+
+// Helper function to get dynamic title style based on terminal width
+func (m model) getTitleStyle() lipgloss.Style {
+	return m.tuiHelper.GetResponsiveTitleStyle(titleStyle)
+}
+
 func (m model) Init() tea.Cmd {
 	return loadActivityData
 }
@@ -131,8 +141,7 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.tuiHelper.HandleWindowSizeMsg(msg)
 		return m, nil
 
 	case dataLoadedMsg:
@@ -203,11 +212,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.loading {
-		return "\n  Loading repository activity data...\n"
+		loadingMsg := "Loading repository activity data..."
+		return m.tuiHelper.CenterContent(loadingMsg)
 	}
 
 	if m.err != nil {
-		return errorStyle.Render(fmt.Sprintf("\n  Error: %v\n", m.err))
+		errorMsg := fmt.Sprintf("Error: %v", m.err)
+		return m.tuiHelper.CenterContent(errorStyle.Render(errorMsg))
 	}
 
 	var content strings.Builder
@@ -215,7 +226,7 @@ func (m model) View() string {
 	// Title with current view indicator
 	viewNames := []string{"Overview", "Timing", "Patterns", "Contributors", "Trends"}
 	title := fmt.Sprintf("📊 Repository Activity Dashboard - %s", viewNames[m.currentView])
-	content.WriteString(titleStyle.Render(title))
+	content.WriteString(m.getTitleStyle().Render(title))
 	content.WriteString("\n\n")
 
 	// Render current view
@@ -232,42 +243,81 @@ func (m model) View() string {
 		content.WriteString(m.renderTrendsView())
 	}
 
-	// Navigation help
-	help := "\n" + lipgloss.NewStyle().
+	// Navigation help at the bottom
+	width, _ := m.tuiHelper.GetSize()
+	help := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#626262")).
+		Width(width).
+		Align(lipgloss.Center).
 		Render("1: Overview • 2: Timing • 3: Patterns • 4: Contributors • 5: Trends • ←/→: Navigate • q: Quit")
+
+	content.WriteString("\n")
 	content.WriteString(help)
 
-	return content.String()
+	// Ensure content fits within terminal height
+	result := content.String()
+	return m.tuiHelper.TruncateContentToHeight(result)
 }
 
 func (m model) renderOverviewView() string {
 	d := m.data
 	var content strings.Builder
 
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📈 Overview Statistics")))
+	// Calculate available width for content layout
+	width, height := m.tuiHelper.GetSize()
+
+	// Use responsive section style
+	sectionStyleResponsive := m.getSectionStyle()
+
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📈 Overview Statistics")))
 	content.WriteString("\n\n")
 
-	stats := []string{
-		fmt.Sprintf("Total Commits: %s", statsStyle.Render(fmt.Sprintf("%d", d.TotalCommits))),
-		fmt.Sprintf("Average per Day: %s", statsStyle.Render(fmt.Sprintf("%.1f", d.AveragePerDay))),
-		fmt.Sprintf("Current Streak: %s days", statsStyle.Render(fmt.Sprintf("%d", d.CurrentStreak))),
-		fmt.Sprintf("Longest Streak: %s days", statsStyle.Render(fmt.Sprintf("%d", d.LongestStreak))),
-		fmt.Sprintf("Most Active Day: %s", statsStyle.Render(d.MostActiveDay)),
-		fmt.Sprintf("Most Active Hour: %s", statsStyle.Render(fmt.Sprintf("%d:00", d.MostActiveHour))),
-	}
+	// Create two-column layout for larger terminals
+	if width >= 80 {
+		leftCol := []string{
+			fmt.Sprintf("Total Commits: %s", statsStyle.Render(fmt.Sprintf("%d", d.TotalCommits))),
+			fmt.Sprintf("Average per Day: %s", statsStyle.Render(fmt.Sprintf("%.1f", d.AveragePerDay))),
+			fmt.Sprintf("Current Streak: %s days", statsStyle.Render(fmt.Sprintf("%d", d.CurrentStreak))),
+		}
 
-	for _, stat := range stats {
-		content.WriteString(stat + "\n")
+		rightCol := []string{
+			fmt.Sprintf("Longest Streak: %s days", statsStyle.Render(fmt.Sprintf("%d", d.LongestStreak))),
+			fmt.Sprintf("Most Active Day: %s", statsStyle.Render(d.MostActiveDay)),
+			fmt.Sprintf("Most Active Hour: %s", statsStyle.Render(fmt.Sprintf("%d:00", d.MostActiveHour))),
+		}
+
+		content.WriteString(m.tuiHelper.CreateTwoColumnLayout(leftCol, rightCol))
+	} else {
+		// Single column for smaller terminals
+		stats := []string{
+			fmt.Sprintf("Total Commits: %s", statsStyle.Render(fmt.Sprintf("%d", d.TotalCommits))),
+			fmt.Sprintf("Average per Day: %s", statsStyle.Render(fmt.Sprintf("%.1f", d.AveragePerDay))),
+			fmt.Sprintf("Current Streak: %s days", statsStyle.Render(fmt.Sprintf("%d", d.CurrentStreak))),
+			fmt.Sprintf("Longest Streak: %s days", statsStyle.Render(fmt.Sprintf("%d", d.LongestStreak))),
+			fmt.Sprintf("Most Active Day: %s", statsStyle.Render(d.MostActiveDay)),
+			fmt.Sprintf("Most Active Hour: %s", statsStyle.Render(fmt.Sprintf("%d:00", d.MostActiveHour))),
+		}
+
+		for _, stat := range stats {
+			content.WriteString(stat + "\n")
+		}
 	}
 
 	content.WriteString("\n")
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📅 Recent Activity")))
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📅 Recent Activity")))
 	content.WriteString("\n\n")
 
 	if len(d.RecentActivity) > 0 {
+		// Adjust number of shown items based on available height
+		maxItems := 7
+		if height < 20 {
+			maxItems = 3
+		} else if height < 30 {
+			maxItems = 5
+		}
+
 		for i, activity := range d.RecentActivity {
-			if i >= 7 { // Show last 7 days
+			if i >= maxItems {
 				break
 			}
 			content.WriteString(fmt.Sprintf("%s: %s commits\n",
@@ -284,7 +334,10 @@ func (m model) renderTimingView() string {
 	d := m.data
 	var content strings.Builder
 
-	content.WriteString(sectionStyle.Render(headerStyle.Render("⏰ Hourly Distribution")))
+	// Use responsive section style
+	sectionStyleResponsive := m.getSectionStyle()
+
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("⏰ Hourly Distribution")))
 	content.WriteString("\n\n")
 
 	// Hour distribution with enhanced visualization
@@ -296,11 +349,14 @@ func (m model) renderTimingView() string {
 	}
 
 	if maxHourly > 0 {
+		// Calculate bar length based on terminal width
+		maxBarLength := m.tuiHelper.CalculateBarLength(30, 40) // 30 for labels, max 40 for bars
+
 		for hour := 0; hour < 24; hour++ {
 			count := d.CommitsByHour[hour]
 			if count > 0 {
 				percentage := float64(count) / float64(maxHourly)
-				barLength := int(percentage * 25)
+				barLength := int(percentage * float64(maxBarLength))
 				bars := strings.Repeat("█", barLength)
 				if barLength == 0 && count > 0 {
 					bars = "▏"
@@ -314,7 +370,7 @@ func (m model) renderTimingView() string {
 	}
 
 	content.WriteString("\n")
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📅 Weekly Distribution")))
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📅 Weekly Distribution")))
 	content.WriteString("\n\n")
 
 	// Day of week distribution
@@ -327,11 +383,14 @@ func (m model) renderTimingView() string {
 	}
 
 	if maxDaily > 0 {
+		// Calculate bar length based on terminal width
+		maxBarLength := m.tuiHelper.CalculateBarLength(25, 30) // 25 for labels, max 30 for bars
+
 		for i, day := range days {
 			count := d.CommitsByDay[i]
 			if count > 0 {
 				percentage := float64(count) / float64(maxDaily)
-				barLength := int(percentage * 20)
+				barLength := int(percentage * float64(maxBarLength))
 				bars := strings.Repeat("█", barLength)
 				if barLength == 0 && count > 0 {
 					bars = "▏"
@@ -349,12 +408,24 @@ func (m model) renderPatternsView() string {
 	d := m.data
 	var content strings.Builder
 
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📅 Monthly Trends")))
+	// Use responsive section style
+	sectionStyleResponsive := m.getSectionStyle()
+	_, height := m.tuiHelper.GetSize()
+
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📅 Monthly Trends")))
 	content.WriteString("\n\n")
 
 	if len(d.MonthlyTrends) > 0 {
+		// Adjust number of months shown based on terminal height
+		maxMonths := 12
+		if height < 25 {
+			maxMonths = 6
+		} else if height < 35 {
+			maxMonths = 9
+		}
+
 		for i, trend := range d.MonthlyTrends {
-			if i >= 12 { // Show last 12 months
+			if i >= maxMonths {
 				break
 			}
 			changeIndicator := ""
@@ -372,7 +443,7 @@ func (m model) renderPatternsView() string {
 	}
 
 	content.WriteString("\n")
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📈 Activity Patterns")))
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📈 Activity Patterns")))
 	content.WriteString("\n\n")
 
 	// Peak hours analysis
@@ -415,13 +486,27 @@ func (m model) renderPatternsView() string {
 func (m model) renderContributorsView() string {
 	var content strings.Builder
 
-	content.WriteString(sectionStyle.Render(headerStyle.Render("👥 Contributors Analysis")))
+	// Use responsive section style
+	sectionStyleResponsive := m.getSectionStyle()
+
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("👥 Contributors Analysis")))
 	content.WriteString("\n\n")
 
 	if len(m.data.TopAuthors) > 0 {
 		content.WriteString("Navigate with ↑/↓ keys\n\n")
 
+		// Calculate how many contributors to show based on terminal height
+		maxContributors := m.tuiHelper.CalculateMaxItemsForHeight(5, 10) // 5 lines per contributor, 10 reserved lines
+
+		if maxContributors > len(m.data.TopAuthors) {
+			maxContributors = len(m.data.TopAuthors)
+		}
+
 		for i, author := range m.data.TopAuthors {
+			if i >= maxContributors {
+				break
+			}
+
 			prefix := "  "
 			if i == m.contributorIndex {
 				prefix = "▶ "
@@ -432,6 +517,10 @@ func (m model) renderContributorsView() string {
 			content.WriteString(fmt.Sprintf("    Avg: %.1f commits/week\n", author.AvgPerWeek))
 			content.WriteString(fmt.Sprintf("    Active: %s to %s\n", author.FirstCommit, author.LastCommit))
 			content.WriteString("\n")
+		}
+
+		if len(m.data.TopAuthors) > maxContributors {
+			content.WriteString(fmt.Sprintf("... and %d more contributors\n", len(m.data.TopAuthors)-maxContributors))
 		}
 	} else {
 		content.WriteString("No contributor data available\n")
@@ -444,7 +533,11 @@ func (m model) renderTrendsView() string {
 	d := m.data
 	var content strings.Builder
 
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📈 Long-term Trends")))
+	// Use responsive section style
+	sectionStyleResponsive := m.getSectionStyle()
+	_, height := m.tuiHelper.GetSize()
+
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📈 Long-term Trends")))
 	content.WriteString("\n\n")
 
 	// Commit frequency analysis
@@ -465,7 +558,7 @@ func (m model) renderTrendsView() string {
 	}
 
 	content.WriteString("\n")
-	content.WriteString(sectionStyle.Render(headerStyle.Render("🏆 Repository Milestones")))
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("🏆 Repository Milestones")))
 	content.WriteString("\n\n")
 
 	// Milestone analysis
@@ -485,12 +578,27 @@ func (m model) renderTrendsView() string {
 		milestones = append(milestones, fmt.Sprintf("⚡ Sustained %.1f commits/day average", d.AveragePerDay))
 	}
 
-	for _, milestone := range milestones {
+	// Limit milestones shown based on terminal height
+	maxMilestones := len(milestones)
+	if height < 20 {
+		maxMilestones = 2
+	} else if height < 30 {
+		maxMilestones = 3
+	}
+
+	for i, milestone := range milestones {
+		if i >= maxMilestones {
+			break
+		}
 		content.WriteString(milestone + "\n")
 	}
 
+	if len(milestones) > maxMilestones {
+		content.WriteString(fmt.Sprintf("... and %d more milestones\n", len(milestones)-maxMilestones))
+	}
+
 	content.WriteString("\n")
-	content.WriteString(sectionStyle.Render(headerStyle.Render("📊 Activity Summary")))
+	content.WriteString(sectionStyleResponsive.Render(headerStyle.Render("📊 Activity Summary")))
 	content.WriteString("\n\n")
 
 	// Summary insights
@@ -882,7 +990,8 @@ func formatRecentActivity(recentDates map[string]int) []CommitActivity {
 // RunActivityDashboard starts the repository activity dashboard TUI
 func RunActivityDashboard() error {
 	m := model{
-		loading: true,
+		loading:   true,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
