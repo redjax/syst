@@ -56,7 +56,7 @@ func (h *ResponsiveTUIHelper) GetResponsiveSectionStyle(baseStyle lipgloss.Style
 	if maxWidth < 40 {
 		maxWidth = 40 // Minimum width
 	}
-	
+
 	return baseStyle.Width(maxWidth)
 }
 
@@ -92,7 +92,7 @@ func (h *ResponsiveTUIHelper) CalculateMaxItemsForHeight(linesPerItem int, reser
 	if availableLines <= 0 {
 		return 1
 	}
-	
+
 	maxItems := availableLines / linesPerItem
 	if maxItems < 1 {
 		maxItems = 1
@@ -106,7 +106,7 @@ func (h *ResponsiveTUIHelper) TruncateContentToHeight(content string) string {
 	if len(lines) <= h.height-1 {
 		return content
 	}
-	
+
 	// Truncate if too many lines
 	lines = lines[:h.height-2]
 	lines = append(lines, lipgloss.NewStyle().
@@ -128,29 +128,29 @@ func (h *ResponsiveTUIHelper) CenterContent(content string) string {
 // Falls back to single column on smaller terminals
 func (h *ResponsiveTUIHelper) CreateTwoColumnLayout(leftItems, rightItems []string) string {
 	var result strings.Builder
-	
+
 	if h.width >= 80 {
 		// Two-column layout for larger terminals
 		contentWidth := h.GetContentWidth()
 		leftStyle := lipgloss.NewStyle().Width(contentWidth / 2)
 		rightStyle := lipgloss.NewStyle().Width(contentWidth / 2)
-		
+
 		maxItems := len(leftItems)
 		if len(rightItems) > maxItems {
 			maxItems = len(rightItems)
 		}
-		
+
 		for i := 0; i < maxItems; i++ {
 			leftText := ""
 			rightText := ""
-			
+
 			if i < len(leftItems) {
 				leftText = leftStyle.Render(leftItems[i])
 			}
 			if i < len(rightItems) {
 				rightText = rightStyle.Render(rightItems[i])
 			}
-			
+
 			result.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, leftText, rightText))
 			result.WriteString("\n")
 		}
@@ -159,12 +159,12 @@ func (h *ResponsiveTUIHelper) CreateTwoColumnLayout(leftItems, rightItems []stri
 		allItems := make([]string, 0, len(leftItems)+len(rightItems))
 		allItems = append(allItems, leftItems...)
 		allItems = append(allItems, rightItems...)
-		
+
 		for _, item := range allItems {
 			result.WriteString(item + "\n")
 		}
 	}
-	
+
 	return result.String()
 }
 
@@ -196,7 +196,7 @@ func (h *ResponsiveTUIHelper) CreateResponsiveHelpLine(helpText string, style li
 // Returns true if we're in a small terminal (compact mode)
 func (h *ResponsiveTUIHelper) AdaptContentToTerminalSize() (compact bool, maxItems int) {
 	compact = h.width < 80 || h.height < 25
-	
+
 	if h.height < 15 {
 		maxItems = 3
 	} else if h.height < 25 {
@@ -206,7 +206,7 @@ func (h *ResponsiveTUIHelper) AdaptContentToTerminalSize() (compact bool, maxIte
 	} else {
 		maxItems = 12
 	}
-	
+
 	return compact, maxItems
 }
 
@@ -214,9 +214,9 @@ func (h *ResponsiveTUIHelper) AdaptContentToTerminalSize() (compact bool, maxIte
 func (h *ResponsiveTUIHelper) CreateProgressBar(percentage float64, maxWidth int) string {
 	barWidth := h.CalculateBarLength(0, maxWidth)
 	filledWidth := int(percentage * float64(barWidth))
-	
+
 	filled := strings.Repeat("█", filledWidth)
 	empty := strings.Repeat("░", barWidth-filledWidth)
-	
+
 	return filled + empty
 }

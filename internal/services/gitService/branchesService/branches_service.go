@@ -638,7 +638,7 @@ func RunBranchesExplorer(directBranch string) error {
 		viewMode:     BranchListView,
 		loading:      true,
 		directBranch: directBranch,
-		tuiHelper: terminal.NewResponsiveTUIHelper(),
+		tuiHelper:    terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
