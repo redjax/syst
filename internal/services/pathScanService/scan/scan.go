@@ -3,9 +3,7 @@ package scan
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/redjax/syst/internal/services/pathScanService/tbl"
 )
@@ -104,14 +102,8 @@ func scanDirectoryRecursive(rootPath string, limit int, sortColumn, sortOrder st
 			relPath = path
 		}
 
-		// Add repo indicator for git repositories
-		name := relPath
-		if info.IsDir() && isGitRepository(path) {
-			name = relPath + " [GIT]"
-		}
-
 		row := []string{
-			name,
+			relPath,
 			fmt.Sprintf("%d", size),
 			sizeParsed,
 			ctime,
@@ -150,23 +142,4 @@ func scanDirectoryRecursive(rootPath string, limit int, sortColumn, sortOrder st
 	tbl.PrintScanResultsTable(results)
 
 	return nil
-}
-
-// isGitRepository checks if a directory is a git repository
-func isGitRepository(path string) bool {
-	// Check if .git directory exists
-	gitPath := filepath.Join(path, ".git")
-	if _, err := os.Stat(gitPath); err == nil {
-		return true
-	}
-
-	// Also check using git command for more thorough detection
-	cmd := exec.Command("git", "-C", path, "rev-parse", "--is-inside-work-tree")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-
-	result := strings.TrimSpace(string(output))
-	return result == "true"
 }

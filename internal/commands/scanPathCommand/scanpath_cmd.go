@@ -29,7 +29,7 @@ func NewScanPathCommand() *cobra.Command {
 
 Control the scan & results using flags like --limit (to limit the number of items scanned), and --order (to control sorting order, asc/desc).
 
-Use the --recursive flag to traverse subdirectories, including git repositories.
+Use the --recursive flag to traverse subdirectories.
 
 Run syst scanpath --help to see all options.
 `,
@@ -44,7 +44,7 @@ Run syst scanpath --help to see all options.
 	cmd.Flags().StringVarP(&sortBy, "sort", "s", "name", "Column to sort by (name, size, created, modified, owner, permissions)")
 	cmd.Flags().StringVarP(&order, "order", "o", "asc", "Sort order: asc or desc")
 	cmd.Flags().StringVarP(&filter, "filter", "f", "", "Filter results (e.g. 'size <10MB', 'created >2022-01-01')")
-	cmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively traverse subdirectories, including git repositories")
+	cmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively traverse subdirectories")
 
 	return cmd
 }
