@@ -4,5 +4,7 @@ build/
 release/
 bin/
 
+*.exe
+
 !scripts/
 !scripts/build/
