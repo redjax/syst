@@ -13,6 +13,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type ViewMode int
@@ -50,8 +51,7 @@ type model struct {
 	branchList     list.Model
 	commitList     list.Model
 	viewMode       ViewMode
-	width          int
-	height         int
+	tuiHelper      *terminal.ResponsiveTUIHelper
 	err            error
 	loading        bool
 	directBranch   string
@@ -156,12 +156,11 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.branchList.SetWidth(msg.Width)
-		m.branchList.SetHeight(msg.Height - 10)
-		m.commitList.SetWidth(msg.Width)
-		m.commitList.SetHeight(msg.Height - 15)
+		m.tuiHelper.HandleWindowSizeMsg(msg)
+		m.branchList.SetWidth(m.tuiHelper.GetWidth())
+		m.branchList.SetHeight(m.tuiHelper.GetHeight() - 10)
+		m.commitList.SetWidth(m.tuiHelper.GetWidth())
+		m.commitList.SetHeight(m.tuiHelper.GetHeight() - 15)
 		return m, nil
 
 	case dataLoadedMsg:
@@ -639,6 +638,7 @@ func RunBranchesExplorer(directBranch string) error {
 		viewMode:     BranchListView,
 		loading:      true,
 		directBranch: directBranch,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())

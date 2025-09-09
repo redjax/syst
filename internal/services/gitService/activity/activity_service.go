@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	gitservice "github.com/redjax/syst/internal/services/gitService"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type ViewMode int
@@ -88,7 +88,7 @@ type model struct {
 	contributorIndex int
 	err              error
 	loading          bool
-	tuiHelper        *gitservice.ResponsiveTUIHelper
+	tuiHelper        *terminal.ResponsiveTUIHelper
 }
 
 type dataLoadedMsg struct {
@@ -991,7 +991,7 @@ func formatRecentActivity(recentDates map[string]int) []CommitActivity {
 func RunActivityDashboard() error {
 	m := model{
 		loading:   true,
-		tuiHelper: gitservice.NewResponsiveTUIHelper(),
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())

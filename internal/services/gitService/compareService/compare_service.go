@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -76,8 +77,7 @@ type model struct {
 	// UI state
 	loading    bool
 	err        error
-	width      int
-	height     int
+	tuiHelper *terminal.ResponsiveTUIHelper
 	showSearch bool
 }
 
@@ -107,6 +107,7 @@ func RunComparison(args []string) error {
 	m := model{
 		currentView: OverviewView,
 		loading:     true,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	// Initialize UI components
@@ -156,11 +157,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.tuiHelper.HandleWindowSizeMsg(msg)
 
-		listHeight := m.height - 10
-		listWidth := m.width - 4
+		listHeight := m.tuiHelper.GetHeight() - 10
+		listWidth := m.tuiHelper.GetWidth() - 4
 
 		m.overviewList.SetSize(listWidth, listHeight)
 		m.divergenceList.SetSize(listWidth, listHeight)

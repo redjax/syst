@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -89,8 +90,7 @@ type model struct {
 	fileList    list.Model
 	loading     bool
 	err         error
-	width       int
-	height      int
+	tuiHelper *terminal.ResponsiveTUIHelper
 	sections    []string
 }
 
@@ -191,10 +191,9 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.fileList.SetWidth(msg.Width)
-		m.fileList.SetHeight(msg.Height - 12)
+		m.tuiHelper.HandleWindowSizeMsg(msg)
+		m.fileList.SetWidth(m.tuiHelper.GetWidth())
+		m.fileList.SetHeight(m.tuiHelper.GetHeight() - 12)
 		return m, nil
 
 	case dataLoadedMsg:
@@ -793,6 +792,7 @@ func RunFileAnalysis() error {
 		fileList:    fileList,
 		currentView: OverviewView,
 		loading:     true,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())

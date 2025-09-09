@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -204,8 +205,7 @@ type model struct {
 	// UI state
 	loading    bool
 	err        error
-	width      int
-	height     int
+	tuiHelper *terminal.ResponsiveTUIHelper
 	showSearch bool
 }
 
@@ -298,6 +298,7 @@ func initModel(repo *git.Repository, args []string) model {
 		searchInput:  searchInput,
 		currentPath:  startingPath,
 		loading:      true,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
 	return m
@@ -320,13 +321,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.tuiHelper.HandleWindowSizeMsg(msg)
 
-		listHeight := m.height - 8
-		m.fileList.SetSize(m.width-4, listHeight)
-		m.blameList.SetSize(m.width-4, listHeight)
-		m.historyList.SetSize(m.width-4, listHeight)
+		listHeight := m.tuiHelper.GetHeight() - 8
+		m.fileList.SetSize(m.tuiHelper.GetWidth()-4, listHeight)
+		m.blameList.SetSize(m.tuiHelper.GetWidth()-4, listHeight)
+		m.historyList.SetSize(m.tuiHelper.GetWidth()-4, listHeight)
 
 	case filesLoadedMsg:
 		m.loading = false
@@ -1112,7 +1112,7 @@ func (m model) renderLoading() string {
 		content += "Loading repository files..."
 	}
 
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, style.Render(content))
+	return lipgloss.Place(m.tuiHelper.GetWidth(), m.tuiHelper.GetHeight(), lipgloss.Center, lipgloss.Center, style.Render(content))
 }
 
 func (m model) renderError() string {
@@ -1124,7 +1124,7 @@ func (m model) renderError() string {
 		Width(60)
 
 	content := "❌ Error\n\n" + m.err.Error()
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, style.Render(content))
+	return lipgloss.Place(m.tuiHelper.GetWidth(), m.tuiHelper.GetHeight(), lipgloss.Center, lipgloss.Center, style.Render(content))
 }
 
 func (m model) renderFileList() string {

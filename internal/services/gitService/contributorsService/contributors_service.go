@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type ViewMode int
@@ -77,8 +78,7 @@ type model struct {
 	overallStats    OverallStats
 	contributorList list.Model
 	viewMode        ViewMode
-	width           int
-	height          int
+	tuiHelper       *terminal.ResponsiveTUIHelper
 	err             error
 	loading         bool
 }
@@ -149,10 +149,10 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.contributorList.SetWidth(msg.Width)
-		m.contributorList.SetHeight(msg.Height - 10)
+		m.tuiHelper.HandleWindowSizeMsg(msg)
+		width, height := m.tuiHelper.GetSize()
+		m.contributorList.SetWidth(width)
+		m.contributorList.SetHeight(height - 10)
 		return m, nil
 
 	case dataLoadedMsg:
@@ -667,6 +667,7 @@ func RunContributorsAnalysis() error {
 		contributorList: contributorList,
 		viewMode:        ContributorListView,
 		loading:         true,
+		tuiHelper:       terminal.NewResponsiveTUIHelper(),
 	}
 
 	p := tea.NewProgram(m, tea.WithAltScreen())
