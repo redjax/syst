@@ -26,6 +26,7 @@ func NewGitCommand() *cobra.Command {
 	cmd.AddCommand(NewGitHealthCommand())
 	cmd.AddCommand(NewGitHistoryCommand())
 	cmd.AddCommand(NewGitSearchCommand())
+	cmd.AddCommand(NewGitStatusCommand())
 
 	return cmd
 }
