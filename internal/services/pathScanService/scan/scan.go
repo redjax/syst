@@ -9,7 +9,15 @@ import (
 )
 
 // ScanDirectory scans a path with options and returns a list of files
-func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterString string) error {
+func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterString string, recursive bool) error {
+	if recursive {
+		return scanDirectoryRecursive(path, limit, sortColumn, sortOrder, filterString)
+	}
+	return scanDirectoryShallow(path, limit, sortColumn, sortOrder, filterString)
+}
+
+// scanDirectoryShallow performs the original non-recursive scan
+func scanDirectoryShallow(path string, limit int, sortColumn, sortOrder string, filterString string) error {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return err
@@ -44,6 +52,79 @@ func ScanDirectory(path string, limit int, sortColumn, sortOrder string, filterS
 		if limit > 0 && count >= limit {
 			break
 		}
+	}
+
+	var filterExpr *tbl.FilterExpr
+
+	if filterString != "" {
+		filterExpr, err = tbl.ParseFilter(filterString)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid filter: %v\n", err)
+		}
+	}
+
+	results = tbl.ApplyFilter(results, filterExpr)
+
+	tbl.SortResults(results, sortColumn, sortOrder)
+	tbl.PrintScanResultsTable(results)
+
+	return nil
+}
+
+// scanDirectoryRecursive performs recursive directory traversal
+func scanDirectoryRecursive(rootPath string, limit int, sortColumn, sortOrder string, filterString string) error {
+	var results [][]string
+	count := 0
+
+	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// Skip directories we can't access
+			return nil
+		}
+
+		// Skip .git directories to avoid deep traversal into git internals
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
+		}
+
+		// Check if we've hit our limit
+		if limit > 0 && count >= limit {
+			return fmt.Errorf("limit_reached")
+		}
+
+		ctime, owner := getMeta(info, path)
+		size := info.Size()
+		sizeParsed := tbl.ByteCountIEC(size)
+
+		// Use relative path from the root for display
+		relPath, err := filepath.Rel(rootPath, path)
+		if err != nil {
+			relPath = path
+		}
+
+		row := []string{
+			relPath,
+			fmt.Sprintf("%d", size),
+			sizeParsed,
+			ctime,
+			info.ModTime().Format("2006-01-02 15:04:05"),
+			owner,
+			info.Mode().String(),
+		}
+
+		results = append(results, row)
+		count++
+
+		return nil
+	})
+
+	// Handle early termination due to limit
+	if err != nil && err.Error() == "limit_reached" {
+		err = nil
+	}
+
+	if err != nil {
+		return err
 	}
 
 	var filterExpr *tbl.FilterExpr
