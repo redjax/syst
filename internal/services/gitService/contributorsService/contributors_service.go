@@ -227,11 +227,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.loading {
-		return "\n  Analyzing contributor data...\n"
+		return m.tuiHelper.CenterContent("Analyzing contributor data...")
 	}
 
 	if m.err != nil {
-		return errorStyle.Render(fmt.Sprintf("\n  Error: %v\n", m.err))
+		return m.tuiHelper.CenterContent(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
 	}
 
 	switch m.viewMode {
@@ -262,7 +262,7 @@ func (m model) renderContributorList() string {
 	help := helpStyle.Render("↑/↓: navigate • enter: details • t: timeline • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderOverallStats() string {
@@ -297,7 +297,7 @@ func (m model) renderOverallStats() string {
 
 func (m model) renderContributorDetail() string {
 	if m.selectedIndex >= len(m.contributors) {
-		return "No contributor selected"
+		return m.tuiHelper.CenterContent("No contributor selected")
 	}
 
 	contributor := m.contributors[m.selectedIndex]
@@ -321,7 +321,7 @@ func (m model) renderContributorDetail() string {
 	help := helpStyle.Render("↑/↓: switch contributor • t: timeline • esc: back • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderContributorStats(contributor ContributorData) string {
@@ -466,7 +466,7 @@ func (m model) renderTimelineView() string {
 	help := helpStyle.Render("↑/↓: navigate • t: details • esc: back • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func loadContributorData() tea.Msg {

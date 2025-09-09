@@ -256,11 +256,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.loading {
-		return "\n  Loading branch data...\n"
+		return m.tuiHelper.CenterContent("Loading branch data...")
 	}
 
 	if m.err != nil {
-		return errorStyle.Render(fmt.Sprintf("\n  Error: %v\n", m.err))
+		return m.tuiHelper.CenterContent(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
 	}
 
 	switch m.viewMode {
@@ -281,17 +281,19 @@ func (m model) renderBranchList() string {
 	title := titleStyle.Render("🌿 Branch Explorer")
 	sections = append(sections, title)
 
-	sections = append(sections, m.branchList.View())
+	// Use responsive sizing for the branch list
+	listContent := m.branchList.View()
+	sections = append(sections, listContent)
 
 	help := helpStyle.Render("↑/↓: navigate • enter: select branch • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderBranchDetail() string {
 	if m.selectedBranch == nil {
-		return "No branch selected"
+		return m.tuiHelper.CenterContent("No branch selected")
 	}
 
 	var sections []string
@@ -317,7 +319,7 @@ func (m model) renderBranchDetail() string {
 	help := helpStyle.Render("↑/↓: navigate commits • enter: view commit • esc: back to branches • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderBranchInfo() string {
@@ -356,7 +358,7 @@ func (m model) renderBranchInfo() string {
 
 func (m model) renderCommitDetail() string {
 	if m.selectedCommit == nil {
-		return "No commit selected"
+		return m.tuiHelper.CenterContent("No commit selected")
 	}
 
 	var sections []string
@@ -371,7 +373,7 @@ func (m model) renderCommitDetail() string {
 	help := helpStyle.Render("esc: back to commits • q: quit")
 	sections = append(sections, help)
 
-	return strings.Join(sections, "\n")
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
 }
 
 func (m model) renderCommitInfo() string {
