@@ -17,9 +17,16 @@ import (
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
 func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	if runtime.GOOS == "windows" {
+		// Show current version information first
+		info := GetPackageInfo()
+		fmt.Printf("Current version: %s (commit: %s, built: %s)\n\n",
+			info.PackageVersion,
+			info.PackageCommit,
+			info.PackageReleaseDate)
+
 		scriptBlock := "if ($p = (Get-Command -Name syst -ErrorAction SilentlyContinue)) { Remove-Item $p.Path }; & ([scriptblock]::Create((irm https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.ps1))) -Auto"
 		ghIssueLink := "https://github.com/redjax/syst/issues/81"
-		fmt.Printf("\nThe 'self upgrade' command does not work correctly on Windows yet: %s.\n\nTo upgrade, run this in your terminal:\n  %s\n", ghIssueLink, scriptBlock)
+		fmt.Printf("⚠️  The 'self upgrade' command does not work correctly on Windows yet: %s.\n\nTo upgrade, run this in your terminal:\n  %s\n", ghIssueLink, scriptBlock)
 		os.Exit(0)
 	}
 
