@@ -176,11 +176,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.loading {
-		return m.tuiHelper.CenterContent("Loading git status...")
+		return "Loading git status..."
 	}
 
 	if m.err != nil {
-		return m.tuiHelper.CenterContent(fmt.Sprintf("Error: %v", m.err))
+		return fmt.Sprintf("Error: %v", m.err)
 	}
 
 	var sections []string
@@ -200,7 +200,7 @@ func (m model) View() string {
 	help := helpStyle.Render("↑/↓: navigate • enter: open file • q: quit")
 	sections = append(sections, help)
 
-	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
+	return strings.Join(sections, "\n")
 }
 
 func (m model) renderStatusSummary() string {
@@ -369,7 +369,7 @@ func gatherStatusInfo() (*StatusInfo, error) {
 	// Parse porcelain output
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(lines) == 1 && lines[0] == "" {
-		// No changes
+		// No changes  
 		return statusInfo, nil
 	}
 
@@ -380,9 +380,13 @@ func gatherStatusInfo() (*StatusInfo, error) {
 
 		// Porcelain format: XY filename
 		// X = staging area status, Y = working tree status
+		// ' ' = unmodified, M = modified, A = added, D = deleted, R = renamed, C = copied, U = updated but unmerged
 		stagingStatus := line[0]
-		worktreeStatus := line[1]
-		filePath := strings.TrimSpace(line[3:])
+		worktreeStatus := line[1]  
+		// Take everything after position 2 (skip the two status chars)
+		filePath := line[2:]
+		// Trim leading space if present
+		filePath = strings.TrimLeft(filePath, " ")
 
 		// Get file info
 		info, err := os.Stat(filePath)
@@ -404,11 +408,11 @@ func gatherStatusInfo() (*StatusInfo, error) {
 		}
 
 		// Categorize based on porcelain status codes
-		// Priority: staged changes first, then working tree changes
-		if stagingStatus != ' ' && stagingStatus != '?' {
-			// File has staged changes
-			fs.Status = "staged"
-			statusInfo.StagedFiles = append(statusInfo.StagedFiles, fs)
+		// Priority order: untracked, then working tree changes, then staged changes
+		if stagingStatus == '?' && worktreeStatus == '?' {
+			// File is untracked
+			fs.Status = "untracked"
+			statusInfo.UntrackedFiles = append(statusInfo.UntrackedFiles, fs)
 		} else if worktreeStatus == 'M' {
 			// File is modified in working tree
 			fs.Status = "modified"
@@ -417,10 +421,10 @@ func gatherStatusInfo() (*StatusInfo, error) {
 			// File is deleted in working tree
 			fs.Status = "deleted"
 			statusInfo.DeletedFiles = append(statusInfo.DeletedFiles, fs)
-		} else if stagingStatus == '?' && worktreeStatus == '?' {
-			// File is untracked
-			fs.Status = "untracked"
-			statusInfo.UntrackedFiles = append(statusInfo.UntrackedFiles, fs)
+		} else if stagingStatus != ' ' {
+			// File has staged changes (A, M, D, R, C, etc. in staging area)
+			fs.Status = "staged"
+			statusInfo.StagedFiles = append(statusInfo.StagedFiles, fs)
 		}
 	}
 
