@@ -72,6 +72,12 @@ var (
 			Padding(0, 1).
 			Bold(true)
 
+	sectionStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1, 2).
+			Margin(1, 0)
+
 	helpStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#626262")).
 			MarginTop(1)
@@ -100,7 +106,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tuiHelper.HandleWindowSizeMsg(msg)
 		width, height := m.tuiHelper.GetSize()
 		m.list.SetWidth(width)
-		m.list.SetHeight(height - 8)
+		m.list.SetHeight(height - 10) // Leave space for title, summary, and help
 		return m, nil
 
 	case dataLoadedMsg:
@@ -168,8 +174,22 @@ func (m model) View() string {
 	title := titleStyle.Render("🚫 Git Ignored Files")
 	sections = append(sections, title)
 
-	// Summary
-	summary := fmt.Sprintf("Total ignored files: %d", len(m.ignoredFiles))
+	// Summary in styled section
+	summaryContent := fmt.Sprintf("Total ignored files: %d", len(m.ignoredFiles))
+	if len(m.ignoredFiles) > 0 {
+		// Add breakdown by type
+		dirs := 0
+		files := 0
+		for _, file := range m.ignoredFiles {
+			if file.IsDir {
+				dirs++
+			} else {
+				files++
+			}
+		}
+		summaryContent += fmt.Sprintf("\nDirectories: %d  Files: %d", dirs, files)
+	}
+	summary := sectionStyle.Render(summaryContent)
 	sections = append(sections, summary)
 
 	// File list
@@ -186,8 +206,25 @@ func (m model) View() string {
 	return strings.Join(sections, "\n")
 }
 
-// RunIgnoredFiles starts the ignored files TUI
+// RunIgnoredFiles starts the ignored files TUI or exports to file
 func RunIgnoredFiles(opts IgnoredOptions) error {
+	// If output path is specified, run in non-interactive mode
+	if opts.OutputPath != "" {
+		ignoredFiles, err := gatherIgnoredFiles(opts)
+		if err != nil {
+			return fmt.Errorf("failed to gather ignored files: %w", err)
+		}
+
+		err = exportIgnoredFiles(ignoredFiles, opts.OutputPath)
+		if err != nil {
+			return fmt.Errorf("failed to export ignored files: %w", err)
+		}
+
+		fmt.Printf("Exported %d ignored files to %s\n", len(ignoredFiles), opts.OutputPath)
+		return nil
+	}
+
+	// Otherwise run interactive TUI
 	delegate := list.NewDefaultDelegate()
 	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
 		Foreground(lipgloss.Color("#874BFD")).
