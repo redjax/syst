@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/redjax/syst/internal/utils/terminal"
 )
 
@@ -87,10 +86,6 @@ var (
 			Foreground(lipgloss.Color("#626262")).
 			MarginTop(1)
 
-	statsStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#04B575")).
-			Bold(true)
-
 	modifiedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFF00")) // Yellow
 
@@ -131,25 +126,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusInfo = msg.statusInfo
 		m.loading = false
 
-		// Create combined list of all files with status
+		// Create combined list of only files with changes
 		var items []list.Item
 
-		// Add files with status first (modified, staged, deleted, untracked)
-		for _, file := range m.statusInfo.ModifiedFiles {
-			items = append(items, statusItem{file: file})
-		}
+		// Add staged files first (highest priority)
 		for _, file := range m.statusInfo.StagedFiles {
 			items = append(items, statusItem{file: file})
 		}
+		// Add modified files
+		for _, file := range m.statusInfo.ModifiedFiles {
+			items = append(items, statusItem{file: file})
+		}
+		// Add deleted files
 		for _, file := range m.statusInfo.DeletedFiles {
 			items = append(items, statusItem{file: file})
 		}
+		// Add untracked files
 		for _, file := range m.statusInfo.UntrackedFiles {
-			items = append(items, statusItem{file: file})
-		}
-
-		// Optionally add clean files at the end
-		for _, file := range m.statusInfo.CleanFiles {
 			items = append(items, statusItem{file: file})
 		}
 
@@ -165,6 +158,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("q", "ctrl+c"))):
 			return m, tea.Quit
+		case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
+			// Open selected file in editor
+			if selected := m.list.SelectedItem(); selected != nil {
+				if item, ok := selected.(statusItem); ok {
+					go openFileInEditor(item.file.Path)
+				}
+			}
+			return m, nil
 		}
 	}
 
@@ -196,7 +197,7 @@ func (m model) View() string {
 	// File list
 	sections = append(sections, m.list.View())
 
-	help := helpStyle.Render("↑/↓: navigate • q: quit")
+	help := helpStyle.Render("↑/↓: navigate • enter: open file • q: quit")
 	sections = append(sections, help)
 
 	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
@@ -205,19 +206,86 @@ func (m model) View() string {
 func (m model) renderStatusSummary() string {
 	var content strings.Builder
 
+	// Calculate total changes (excluding clean files)
+	totalChanges := len(m.statusInfo.ModifiedFiles) + len(m.statusInfo.StagedFiles) + 
+		len(m.statusInfo.DeletedFiles) + len(m.statusInfo.UntrackedFiles)
+
 	content.WriteString("📊 Summary:\n")
-	content.WriteString(fmt.Sprintf("Modified: %s  ",
-		modifiedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.ModifiedFiles)))))
-	content.WriteString(fmt.Sprintf("Staged: %s  ",
-		stagedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.StagedFiles)))))
-	content.WriteString(fmt.Sprintf("Deleted: %s  ",
-		deletedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.DeletedFiles)))))
-	content.WriteString(fmt.Sprintf("Untracked: %s  ",
-		untrackedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.UntrackedFiles)))))
-	content.WriteString(fmt.Sprintf("Clean: %s",
-		statsStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.CleanFiles)))))
+	content.WriteString(fmt.Sprintf("Total Changes: %s  ",
+		titleStyle.Render(fmt.Sprintf("%d", totalChanges))))
+	
+	if len(m.statusInfo.StagedFiles) > 0 {
+		content.WriteString(fmt.Sprintf("Staged: %s  ",
+			stagedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.StagedFiles)))))
+	}
+	if len(m.statusInfo.ModifiedFiles) > 0 {
+		content.WriteString(fmt.Sprintf("Modified: %s  ",
+			modifiedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.ModifiedFiles)))))
+	}
+	if len(m.statusInfo.DeletedFiles) > 0 {
+		content.WriteString(fmt.Sprintf("Deleted: %s  ",
+			deletedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.DeletedFiles)))))
+	}
+	if len(m.statusInfo.UntrackedFiles) > 0 {
+		content.WriteString(fmt.Sprintf("Untracked: %s  ",
+			untrackedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.UntrackedFiles)))))
+	}
+	
+	if totalChanges == 0 {
+		content.WriteString(stagedStyle.Render("✅ Working directory clean"))
+	}
 
 	return content.String()
+}
+
+// openFileInEditor opens a file in the default editor cross-platform
+func openFileInEditor(filePath string) error {
+	var cmd *exec.Cmd
+	
+	switch runtime.GOOS {
+	case "windows":
+		// Try VS Code first, then notepad
+		if _, err := exec.LookPath("code"); err == nil {
+			cmd = exec.Command("code", filePath)
+		} else {
+			cmd = exec.Command("notepad", filePath)
+		}
+	case "darwin": // macOS
+		// Try VS Code first, then default app
+		if _, err := exec.LookPath("code"); err == nil {
+			cmd = exec.Command("code", filePath)
+		} else {
+			cmd = exec.Command("open", filePath)
+		}
+	default: // Linux and other Unix-like systems
+		// Try various editors in order of preference
+		editors := []string{"code", "$EDITOR", "nano", "vi"}
+		for _, editor := range editors {
+			if editor == "$EDITOR" {
+				if envEditor := os.Getenv("EDITOR"); envEditor != "" {
+					if _, err := exec.LookPath(envEditor); err == nil {
+						cmd = exec.Command(envEditor, filePath)
+						break
+					}
+				}
+				continue
+			}
+			if _, err := exec.LookPath(editor); err == nil {
+				cmd = exec.Command(editor, filePath)
+				break
+			}
+		}
+		// Fallback to xdg-open
+		if cmd == nil {
+			cmd = exec.Command("xdg-open", filePath)
+		}
+	}
+	
+	if cmd == nil {
+		return fmt.Errorf("no suitable editor found")
+	}
+	
+	return cmd.Start()
 }
 
 // Helper functions
@@ -281,22 +349,13 @@ func isGitRepository() bool {
 	return err == nil
 }
 
-// gatherStatusInfo collects all file status information
+// gatherStatusInfo collects all file status information using git porcelain format
 func gatherStatusInfo() (*StatusInfo, error) {
-	repo, err := git.PlainOpen(".")
+	// Use git status --porcelain to get the exact same output as git status
+	cmd := exec.Command("git", "status", "--porcelain")
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return nil, err
-	}
-
-	// Get git status
-	status, err := worktree.Status()
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run git status: %w", err)
 	}
 
 	statusInfo := &StatusInfo{
@@ -307,8 +366,25 @@ func gatherStatusInfo() (*StatusInfo, error) {
 		DeletedFiles:   []FileStatus{},
 	}
 
-	// Process git status
-	for filePath, fileStatus := range status {
+	// Parse porcelain output
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) == 1 && lines[0] == "" {
+		// No changes
+		return statusInfo, nil
+	}
+
+	for _, line := range lines {
+		if len(line) < 3 {
+			continue
+		}
+
+		// Porcelain format: XY filename
+		// X = staging area status, Y = working tree status
+		stagingStatus := line[0]
+		worktreeStatus := line[1]
+		filePath := strings.TrimSpace(line[3:])
+
+		// Get file info
 		info, err := os.Stat(filePath)
 		var size int64
 		var modTime string
@@ -327,82 +403,28 @@ func gatherStatusInfo() (*StatusInfo, error) {
 			ModTime: modTime,
 		}
 
-		// Categorize by status
-		if fileStatus.Staging != git.Unmodified {
+		// Categorize based on porcelain status codes
+		// Priority: staged changes first, then working tree changes
+		if stagingStatus != ' ' && stagingStatus != '?' {
+			// File has staged changes
 			fs.Status = "staged"
 			statusInfo.StagedFiles = append(statusInfo.StagedFiles, fs)
-		}
-
-		if fileStatus.Worktree == git.Modified {
+		} else if worktreeStatus == 'M' {
+			// File is modified in working tree
 			fs.Status = "modified"
 			statusInfo.ModifiedFiles = append(statusInfo.ModifiedFiles, fs)
-		}
-
-		if fileStatus.Worktree == git.Untracked {
+		} else if worktreeStatus == 'D' {
+			// File is deleted in working tree
+			fs.Status = "deleted"
+			statusInfo.DeletedFiles = append(statusInfo.DeletedFiles, fs)
+		} else if stagingStatus == '?' && worktreeStatus == '?' {
+			// File is untracked
 			fs.Status = "untracked"
 			statusInfo.UntrackedFiles = append(statusInfo.UntrackedFiles, fs)
 		}
-
-		if fileStatus.Worktree == git.Deleted {
-			fs.Status = "deleted"
-			statusInfo.DeletedFiles = append(statusInfo.DeletedFiles, fs)
-		}
-	}
-
-	// Also get all tracked files
-	cleanFiles, err := getAllTrackedFiles(repo)
-	if err == nil {
-		statusInfo.CleanFiles = cleanFiles
 	}
 
 	return statusInfo, nil
-}
-
-// getAllTrackedFiles gets all files tracked by git
-func getAllTrackedFiles(repo *git.Repository) ([]FileStatus, error) {
-	ref, err := repo.Head()
-	if err != nil {
-		return nil, err
-	}
-
-	commit, err := repo.CommitObject(ref.Hash())
-	if err != nil {
-		return nil, err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return nil, err
-	}
-
-	var trackedFiles []FileStatus
-
-	err = tree.Files().ForEach(func(file *object.File) error {
-		info, err := os.Stat(file.Name)
-		var size int64
-		var modTime string
-		var isDir bool
-
-		if err == nil {
-			size = info.Size()
-			modTime = info.ModTime().Format("2006-01-02 15:04")
-			isDir = info.IsDir()
-		} else {
-			// File might have been deleted
-			size = file.Size
-		}
-
-		trackedFiles = append(trackedFiles, FileStatus{
-			Path:    file.Name,
-			Status:  "tracked",
-			IsDir:   isDir,
-			Size:    size,
-			ModTime: modTime,
-		})
-		return nil
-	})
-
-	return trackedFiles, err
 }
 
 // formatSize formats file size in human readable format
