@@ -36,6 +36,7 @@ type StatusInfo struct {
 	ModifiedFiles  []FileStatus // Files with changes in working directory
 	StagedFiles    []FileStatus // Files staged for commit
 	DeletedFiles   []FileStatus // Files deleted from working directory
+	IgnoredFiles   []FileStatus // Files ignored by .gitignore
 }
 
 // TUI Model and related types
@@ -230,6 +231,10 @@ func (m model) renderStatusSummary() string {
 		content.WriteString(fmt.Sprintf("Untracked: %s  ",
 			untrackedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.UntrackedFiles)))))
 	}
+	if len(m.statusInfo.IgnoredFiles) > 0 {
+		content.WriteString(fmt.Sprintf("Ignored: %s  ",
+			untrackedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.IgnoredFiles)))))
+	}
 	
 	if totalChanges == 0 {
 		content.WriteString(stagedStyle.Render("✅ Working directory clean"))
@@ -364,9 +369,10 @@ func gatherStatusInfo() (*StatusInfo, error) {
 		ModifiedFiles:  []FileStatus{},
 		StagedFiles:    []FileStatus{},
 		DeletedFiles:   []FileStatus{},
+		IgnoredFiles:   []FileStatus{},
 	}
 
-	// Parse porcelain output
+	// Parse porcelain output for regular status
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(lines) == 1 && lines[0] == "" {
 		// No changes  
@@ -425,6 +431,40 @@ func gatherStatusInfo() (*StatusInfo, error) {
 			// File has staged changes (A, M, D, R, C, etc. in staging area)
 			fs.Status = "staged"
 			statusInfo.StagedFiles = append(statusInfo.StagedFiles, fs)
+		}
+	}
+
+	// Get ignored files count using git status --ignored --porcelain
+	ignoredCmd := exec.Command("git", "status", "--ignored", "--porcelain")
+	ignoredOutput, err := ignoredCmd.Output()
+	if err == nil {
+		ignoredLines := strings.Split(strings.TrimSpace(string(ignoredOutput)), "\n")
+		for _, line := range ignoredLines {
+			if len(line) >= 3 && line[0] == '!' && line[1] == '!' {
+				// !! indicates ignored file
+				filePath := line[2:]
+				filePath = strings.TrimLeft(filePath, " ")
+				
+				info, err := os.Stat(filePath)
+				var size int64
+				var modTime string
+				var isDir bool
+
+				if err == nil {
+					size = info.Size()
+					modTime = info.ModTime().Format("2006-01-02 15:04")
+					isDir = info.IsDir()
+				}
+
+				fs := FileStatus{
+					Path:    filePath,
+					Status:  "ignored",
+					IsDir:   isDir,
+					Size:    size,
+					ModTime: modTime,
+				}
+				statusInfo.IgnoredFiles = append(statusInfo.IgnoredFiles, fs)
+			}
 		}
 	}
 
