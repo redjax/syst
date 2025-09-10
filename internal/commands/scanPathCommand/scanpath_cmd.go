@@ -2,6 +2,8 @@
 package scanPathCommand
 
 import (
+	"path/filepath"
+
 	"github.com/redjax/syst/internal/services/pathScanService/scan"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +50,14 @@ Examples:
 			if len(args) > 0 {
 				path = args[0]
 			}
-			return scan.ScanDirectoryTUI(path, limit, sortBy, order, filter, recursive)
+
+			// Convert relative path to absolute path
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+
+			return scan.ScanDirectoryTUI(absPath, limit, sortBy, order, filter, recursive)
 		},
 	}
 
