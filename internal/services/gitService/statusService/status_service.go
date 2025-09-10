@@ -208,13 +208,13 @@ func (m model) renderStatusSummary() string {
 	var content strings.Builder
 
 	// Calculate total changes (excluding clean files)
-	totalChanges := len(m.statusInfo.ModifiedFiles) + len(m.statusInfo.StagedFiles) + 
+	totalChanges := len(m.statusInfo.ModifiedFiles) + len(m.statusInfo.StagedFiles) +
 		len(m.statusInfo.DeletedFiles) + len(m.statusInfo.UntrackedFiles)
 
 	content.WriteString("📊 Summary:\n")
 	content.WriteString(fmt.Sprintf("Total Changes: %s  ",
 		titleStyle.Render(fmt.Sprintf("%d", totalChanges))))
-	
+
 	if len(m.statusInfo.StagedFiles) > 0 {
 		content.WriteString(fmt.Sprintf("Staged: %s  ",
 			stagedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.StagedFiles)))))
@@ -235,7 +235,7 @@ func (m model) renderStatusSummary() string {
 		content.WriteString(fmt.Sprintf("Ignored: %s  ",
 			untrackedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.IgnoredFiles)))))
 	}
-	
+
 	if totalChanges == 0 {
 		content.WriteString(stagedStyle.Render("✅ Working directory clean"))
 	}
@@ -246,7 +246,7 @@ func (m model) renderStatusSummary() string {
 // openFileInEditor opens a file in the default editor cross-platform
 func openFileInEditor(filePath string) error {
 	var cmd *exec.Cmd
-	
+
 	switch runtime.GOOS {
 	case "windows":
 		// Try VS Code first, then notepad
@@ -285,11 +285,11 @@ func openFileInEditor(filePath string) error {
 			cmd = exec.Command("xdg-open", filePath)
 		}
 	}
-	
+
 	if cmd == nil {
 		return fmt.Errorf("no suitable editor found")
 	}
-	
+
 	return cmd.Start()
 }
 
@@ -375,7 +375,7 @@ func gatherStatusInfo() (*StatusInfo, error) {
 	// Parse porcelain output for regular status
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(lines) == 1 && lines[0] == "" {
-		// No changes  
+		// No changes
 		return statusInfo, nil
 	}
 
@@ -388,7 +388,7 @@ func gatherStatusInfo() (*StatusInfo, error) {
 		// X = staging area status, Y = working tree status
 		// ' ' = unmodified, M = modified, A = added, D = deleted, R = renamed, C = copied, U = updated but unmerged
 		stagingStatus := line[0]
-		worktreeStatus := line[1]  
+		worktreeStatus := line[1]
 		// Take everything after position 2 (skip the two status chars)
 		filePath := line[2:]
 		// Trim leading space if present
@@ -444,7 +444,7 @@ func gatherStatusInfo() (*StatusInfo, error) {
 				// !! indicates ignored file
 				filePath := line[2:]
 				filePath = strings.TrimLeft(filePath, " ")
-				
+
 				info, err := os.Stat(filePath)
 				var size int64
 				var modTime string
