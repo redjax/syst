@@ -41,11 +41,14 @@ type StatusInfo struct {
 
 // TUI Model and related types
 type model struct {
-	statusInfo *StatusInfo
-	list       list.Model
-	tuiHelper  *terminal.ResponsiveTUIHelper
-	err        error
-	loading    bool
+	statusInfo   *StatusInfo
+	list         list.Model
+	tuiHelper    *terminal.ResponsiveTUIHelper
+	err          error
+	loading      bool
+	showingDiff  bool
+	diffContent  string
+	diffFilename string
 }
 
 type statusItem struct {
@@ -109,6 +112,11 @@ type errMsg struct {
 	err error
 }
 
+type diffMsg struct {
+	content  string
+	filename string
+}
+
 // Model methods
 func (m model) Init() tea.Cmd {
 	return loadStatusData
@@ -155,7 +163,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		return m, nil
 
+	case diffMsg:
+		m.showingDiff = true
+		m.diffContent = msg.content
+		m.diffFilename = msg.filename
+		return m, nil
+
 	case tea.KeyMsg:
+		// Handle diff view keys first
+		if m.showingDiff {
+			switch {
+			case key.Matches(msg, key.NewBinding(key.WithKeys("q", "esc"))):
+				m.showingDiff = false
+				m.diffContent = ""
+				m.diffFilename = ""
+				return m, nil
+			}
+			return m, nil // Don't process other keys in diff view
+		}
+
+		// Normal status view keys
 		switch {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("q", "ctrl+c"))):
 			return m, tea.Quit
@@ -167,6 +194,82 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+		case key.Matches(msg, key.NewBinding(key.WithKeys("d"))):
+			// Show diff for selected file by capturing output and displaying in TUI
+			if selected := m.list.SelectedItem(); selected != nil {
+				if item, ok := selected.(statusItem); ok {
+					return m, func() tea.Msg {
+						var cmd *exec.Cmd
+
+						switch item.file.Status {
+						case "modified":
+							cmd = exec.Command("git", "diff", item.file.Path)
+						case "staged":
+							cmd = exec.Command("git", "diff", "--cached", item.file.Path)
+						default:
+							// For untracked files, show the file content
+							cmd = exec.Command("git", "show", fmt.Sprintf("HEAD:%s", item.file.Path))
+						}
+
+						output, err := cmd.Output()
+						if err != nil {
+							return errMsg{fmt.Errorf("failed to get diff: %w", err)}
+						}
+
+						if len(output) == 0 {
+							return errMsg{fmt.Errorf("no changes to display for this file")}
+						}
+
+						// Return message with diff content to display
+						return diffMsg{content: string(output), filename: item.file.Path}
+					}
+				}
+			}
+			return m, nil
+		case key.Matches(msg, key.NewBinding(key.WithKeys("D"))):
+			// Discard changes or delete untracked file
+			if selected := m.list.SelectedItem(); selected != nil {
+				if item, ok := selected.(statusItem); ok {
+					return m, func() tea.Msg {
+						err := discardChanges(item.file.Path, item.file.Status)
+						if err != nil {
+							return errMsg{err}
+						}
+						// Reload status after discard
+						return loadStatusData()
+					}
+				}
+			}
+			return m, nil
+		case key.Matches(msg, key.NewBinding(key.WithKeys("i"))):
+			// Show ignored files by capturing output
+			return m, func() tea.Msg {
+				cmd := exec.Command("git", "ls-files", "--ignored", "--exclude-standard", "--others")
+				output, err := cmd.Output()
+				if err != nil {
+					return errMsg{fmt.Errorf("failed to get ignored files: %w", err)}
+				}
+
+				if len(output) == 0 {
+					return errMsg{fmt.Errorf("no ignored files found")}
+				}
+
+				// Format ignored files list
+				files := strings.Split(strings.TrimSpace(string(output)), "\n")
+				var content strings.Builder
+				content.WriteString("📁 Ignored Files:\n")
+				content.WriteString(strings.Repeat("=", 50) + "\n\n")
+
+				for _, file := range files {
+					if file != "" {
+						content.WriteString(fmt.Sprintf("  %s\n", file))
+					}
+				}
+
+				content.WriteString(fmt.Sprintf("\nTotal ignored files: %d\n", len(files)))
+
+				return diffMsg{content: content.String(), filename: "ignored files"}
+			}
 		}
 	}
 
@@ -184,6 +287,11 @@ func (m model) View() string {
 		return fmt.Sprintf("Error: %v", m.err)
 	}
 
+	// Show diff view if active
+	if m.showingDiff {
+		return m.renderDiffView()
+	}
+
 	var sections []string
 
 	title := titleStyle.Render("📋 Git Repository Status")
@@ -198,7 +306,7 @@ func (m model) View() string {
 	// File list
 	sections = append(sections, m.list.View())
 
-	help := helpStyle.Render("↑/↓: navigate • enter: open file • q: quit")
+	help := helpStyle.Render("↑/↓: navigate • enter: open • d: diff • D: discard • i: ignored files • q: quit")
 	sections = append(sections, help)
 
 	return strings.Join(sections, "\n")
@@ -243,6 +351,66 @@ func (m model) renderStatusSummary() string {
 	return content.String()
 }
 
+// renderDiffView displays the diff content
+func (m model) renderDiffView() string {
+	var content strings.Builder
+
+	title := titleStyle.Render(fmt.Sprintf("📄 %s", m.diffFilename))
+	content.WriteString(title)
+	content.WriteString("\n\n")
+
+	// Add diff content with basic syntax highlighting
+	diffLines := strings.Split(m.diffContent, "\n")
+	for _, line := range diffLines {
+		if strings.HasPrefix(line, "+") {
+			content.WriteString(stagedStyle.Render(line))
+		} else if strings.HasPrefix(line, "-") {
+			content.WriteString(deletedStyle.Render(line))
+		} else if strings.HasPrefix(line, "@@") {
+			content.WriteString(modifiedStyle.Render(line))
+		} else {
+			content.WriteString(line)
+		}
+		content.WriteString("\n")
+	}
+
+	content.WriteString("\n")
+	help := helpStyle.Render("Press q/esc to return to status view")
+	content.WriteString(help)
+
+	return content.String()
+}
+
+// discardChanges discards changes or deletes untracked files
+func discardChanges(filePath, status string) error {
+	var cmd *exec.Cmd
+
+	switch status {
+	case "modified":
+		// Discard changes to modified file
+		cmd = exec.Command("git", "checkout", "--", filePath)
+	case "staged":
+		// Unstage the file first, then discard changes
+		unstageCmd := exec.Command("git", "reset", "HEAD", filePath)
+		if err := unstageCmd.Run(); err != nil {
+			return fmt.Errorf("failed to unstage file: %w", err)
+		}
+		cmd = exec.Command("git", "checkout", "--", filePath)
+	case "untracked":
+		// Delete untracked file
+		if runtime.GOOS == "windows" {
+			cmd = exec.Command("cmd", "/c", "del", filePath)
+		} else {
+			cmd = exec.Command("rm", filePath)
+		}
+	default:
+		return fmt.Errorf("cannot discard changes for file with status: %s", status)
+	}
+
+	return cmd.Run()
+}
+
+// browseIgnoredFiles opens a simple viewer for ignored files
 // openFileInEditor opens a file in the default editor cross-platform
 func openFileInEditor(filePath string) error {
 	var cmd *exec.Cmd
@@ -420,15 +588,15 @@ func gatherStatusInfo() (*StatusInfo, error) {
 			fs.Status = "untracked"
 			statusInfo.UntrackedFiles = append(statusInfo.UntrackedFiles, fs)
 		} else if worktreeStatus == 'M' {
-			// File is modified in working tree
+			// File is modified in working tree (takes priority over staged changes)
 			fs.Status = "modified"
 			statusInfo.ModifiedFiles = append(statusInfo.ModifiedFiles, fs)
 		} else if worktreeStatus == 'D' {
 			// File is deleted in working tree
 			fs.Status = "deleted"
 			statusInfo.DeletedFiles = append(statusInfo.DeletedFiles, fs)
-		} else if stagingStatus != ' ' {
-			// File has staged changes (A, M, D, R, C, etc. in staging area)
+		} else if stagingStatus != ' ' && stagingStatus != '?' {
+			// File has staged changes (A, M, D, R, C, etc. in staging area) but no working tree changes
 			fs.Status = "staged"
 			statusInfo.StagedFiles = append(statusInfo.StagedFiles, fs)
 		}
