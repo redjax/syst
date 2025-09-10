@@ -8,8 +8,6 @@ import (
 
 func NewScanPathCommand() *cobra.Command {
 	var (
-		// Target path to scan
-		path string
 		// Limit scanned items
 		limit int
 		// Sort by column (name, size, created, modified, owner, permissions)
@@ -23,23 +21,38 @@ func NewScanPathCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "scanpath",
-		Short: "Scan a directory and list items with metadata",
+		Use:   "scanpath [path]",
+		Short: "Scan a directory and list items with metadata in an interactive TUI",
 		Long: `Scan a directory and list files with metadata like size, creation time, permissions, etc.
+
+The results are displayed in an interactive terminal user interface where you can:
+- Navigate with arrow keys
+- Sort by different columns
+- Filter results
+- Open files/directories
 
 Control the scan & results using flags like --limit (to limit the number of items scanned), and --order (to control sorting order, asc/desc).
 
 Use the --recursive flag to traverse subdirectories.
 
-Run syst scanpath --help to see all options.
+Examples:
+  syst scanpath                    # Scan current directory
+  syst scanpath /path/to/dir       # Scan specific directory  
+  syst scanpath . --recursive      # Scan current directory recursively
+  syst scanpath /usr --limit 100   # Scan /usr but limit to 100 items
 `,
+		Args: cobra.MaximumNArgs(1), // Accept 0 or 1 arguments
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return scan.ScanDirectory(path, limit, sortBy, order, filter, recursive) // ✅ direct call
+			// Default to current directory if no path provided
+			path := "."
+			if len(args) > 0 {
+				path = args[0]
+			}
+			return scan.ScanDirectoryTUI(path, limit, sortBy, order, filter, recursive)
 		},
 	}
 
 	// Add command flags
-	cmd.Flags().StringVarP(&path, "path", "p", ".", "Directory path to scan")
 	cmd.Flags().IntVarP(&limit, "limit", "l", 0, "Limit number of results (0 = unlimited)")
 	cmd.Flags().StringVarP(&sortBy, "sort", "s", "name", "Column to sort by (name, size, created, modified, owner, permissions)")
 	cmd.Flags().StringVarP(&order, "order", "o", "asc", "Sort order: asc or desc")
