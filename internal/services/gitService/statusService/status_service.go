@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sort"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 // StatusOptions configures the git status display
@@ -35,6 +39,211 @@ type StatusInfo struct {
 	DeletedFiles   []FileStatus // Files deleted from working directory
 }
 
+// TUI Model and related types
+type model struct {
+	statusInfo *StatusInfo
+	list       list.Model
+	tuiHelper  *terminal.ResponsiveTUIHelper
+	err        error
+	loading    bool
+}
+
+type statusItem struct {
+	file FileStatus
+}
+
+func (i statusItem) FilterValue() string { return i.file.Path }
+func (i statusItem) Title() string {
+	icon := getStatusIcon(i.file.Status)
+	return fmt.Sprintf("%s %s", icon, i.file.Path)
+}
+func (i statusItem) Description() string {
+	sizeStr := ""
+	if i.file.Size > 0 {
+		sizeStr = fmt.Sprintf(" (%s)", formatSize(i.file.Size))
+	}
+	dirIndicator := ""
+	if i.file.IsDir {
+		dirIndicator = "/"
+	}
+	return fmt.Sprintf("%s%s%s - %s", i.file.Status, dirIndicator, sizeStr, i.file.ModTime)
+}
+
+// Styles
+var (
+	titleStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFDF5")).
+			Background(lipgloss.Color("#25A065")).
+			Padding(0, 1).
+			Bold(true)
+
+	sectionStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1, 2).
+			Margin(1, 0)
+
+	helpStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#626262")).
+			MarginTop(1)
+
+	statsStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#04B575")).
+			Bold(true)
+
+	modifiedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FFFF00")) // Yellow
+
+	deletedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF0000")) // Red
+
+	untrackedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#808080")) // Gray
+
+	stagedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00FF00")) // Green
+)
+
+// TUI Messages
+type dataLoadedMsg struct {
+	statusInfo *StatusInfo
+}
+
+type errMsg struct {
+	err error
+}
+
+// Model methods
+func (m model) Init() tea.Cmd {
+	return loadStatusData
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.tuiHelper.HandleWindowSizeMsg(msg)
+		width, height := m.tuiHelper.GetSize()
+		m.list.SetWidth(width)
+		m.list.SetHeight(height - 10)
+		return m, nil
+
+	case dataLoadedMsg:
+		m.statusInfo = msg.statusInfo
+		m.loading = false
+
+		// Create combined list of all files with status
+		var items []list.Item
+
+		// Add files with status first (modified, staged, deleted, untracked)
+		for _, file := range m.statusInfo.ModifiedFiles {
+			items = append(items, statusItem{file: file})
+		}
+		for _, file := range m.statusInfo.StagedFiles {
+			items = append(items, statusItem{file: file})
+		}
+		for _, file := range m.statusInfo.DeletedFiles {
+			items = append(items, statusItem{file: file})
+		}
+		for _, file := range m.statusInfo.UntrackedFiles {
+			items = append(items, statusItem{file: file})
+		}
+
+		// Optionally add clean files at the end
+		for _, file := range m.statusInfo.CleanFiles {
+			items = append(items, statusItem{file: file})
+		}
+
+		m.list.SetItems(items)
+		return m, nil
+
+	case errMsg:
+		m.err = msg.err
+		m.loading = false
+		return m, nil
+
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, key.NewBinding(key.WithKeys("q", "ctrl+c"))):
+			return m, tea.Quit
+		}
+	}
+
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
+func (m model) View() string {
+	if m.loading {
+		return m.tuiHelper.CenterContent("Loading git status...")
+	}
+
+	if m.err != nil {
+		return m.tuiHelper.CenterContent(fmt.Sprintf("Error: %v", m.err))
+	}
+
+	var sections []string
+
+	title := titleStyle.Render("📋 Git Repository Status")
+	sections = append(sections, title)
+
+	// Status summary
+	if m.statusInfo != nil {
+		summary := m.renderStatusSummary()
+		sections = append(sections, sectionStyle.Render(summary))
+	}
+
+	// File list
+	sections = append(sections, m.list.View())
+
+	help := helpStyle.Render("↑/↓: navigate • q: quit")
+	sections = append(sections, help)
+
+	return m.tuiHelper.CenterContent(strings.Join(sections, "\n"))
+}
+
+func (m model) renderStatusSummary() string {
+	var content strings.Builder
+
+	content.WriteString("📊 Summary:\n")
+	content.WriteString(fmt.Sprintf("Modified: %s  ",
+		modifiedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.ModifiedFiles)))))
+	content.WriteString(fmt.Sprintf("Staged: %s  ",
+		stagedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.StagedFiles)))))
+	content.WriteString(fmt.Sprintf("Deleted: %s  ",
+		deletedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.DeletedFiles)))))
+	content.WriteString(fmt.Sprintf("Untracked: %s  ",
+		untrackedStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.UntrackedFiles)))))
+	content.WriteString(fmt.Sprintf("Clean: %s",
+		statsStyle.Render(fmt.Sprintf("%d", len(m.statusInfo.CleanFiles)))))
+
+	return content.String()
+}
+
+// Helper functions
+func getStatusIcon(status string) string {
+	switch status {
+	case "modified":
+		return "🟡" // Yellow circle for modified
+	case "staged":
+		return "🟢" // Green circle for staged
+	case "deleted":
+		return "🔴" // Red circle for deleted
+	case "untracked":
+		return "⚫" // Gray circle for untracked
+	default:
+		return "  " // No icon for clean files
+	}
+}
+
+func loadStatusData() tea.Msg {
+	statusInfo, err := gatherStatusInfo()
+	if err != nil {
+		return errMsg{err}
+	}
+	return dataLoadedMsg{statusInfo}
+}
+
 // RunGitStatus displays the git status with tracked/untracked indicators
 func RunGitStatus(opts StatusOptions) error {
 	// Check if we're in a git repository
@@ -42,13 +251,27 @@ func RunGitStatus(opts StatusOptions) error {
 		return fmt.Errorf("not a git repository")
 	}
 
-	statusInfo, err := gatherStatusInfo()
-	if err != nil {
-		return fmt.Errorf("failed to gather git status: %w", err)
+	delegate := list.NewDefaultDelegate()
+	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
+		Foreground(lipgloss.Color("#01FAC6")).
+		BorderLeftForeground(lipgloss.Color("#01FAC6"))
+	delegate.Styles.SelectedDesc = delegate.Styles.SelectedDesc.
+		Foreground(lipgloss.Color("#DDDDDD"))
+
+	statusList := list.New([]list.Item{}, delegate, 0, 0)
+	statusList.Title = "Git Status"
+	statusList.SetShowStatusBar(false)
+	statusList.SetShowHelp(false)
+
+	m := model{
+		list:      statusList,
+		loading:   true,
+		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
-	printStatusInfo(statusInfo, opts)
-	return nil
+	p := tea.NewProgram(m, tea.WithAltScreen())
+	_, err := p.Run()
+	return err
 }
 
 // isGitRepository checks if we're in a git repository
@@ -180,134 +403,6 @@ func getAllTrackedFiles(repo *git.Repository) ([]FileStatus, error) {
 	})
 
 	return trackedFiles, err
-}
-
-// printStatusInfo displays the status information
-func printStatusInfo(info *StatusInfo, opts StatusOptions) {
-	fmt.Println("📋 Git Repository Status")
-	fmt.Println(strings.Repeat("=", 50))
-
-	// Only show summary for files that have changes
-	totalChanges := len(info.ModifiedFiles) + len(info.StagedFiles) + len(info.UntrackedFiles) + len(info.DeletedFiles)
-
-	if totalChanges == 0 {
-		fmt.Println("✅ Working directory clean - no changes to commit")
-		if opts.ShowAll && len(info.CleanFiles) > 0 {
-			fmt.Printf("\n📁 Repository contains %d tracked files\n", len(info.CleanFiles))
-		}
-		return
-	}
-
-	// Print summary of changes only
-	if len(info.StagedFiles) > 0 {
-		fmt.Printf("📦 Staged files: %d\n", len(info.StagedFiles))
-	}
-	if len(info.ModifiedFiles) > 0 {
-		fmt.Printf("✏️  Modified files: %d\n", len(info.ModifiedFiles))
-	}
-	if len(info.DeletedFiles) > 0 {
-		fmt.Printf("🗑️  Deleted files: %d\n", len(info.DeletedFiles))
-	}
-	if len(info.UntrackedFiles) > 0 {
-		fmt.Printf("❓ Untracked files: %d\n", len(info.UntrackedFiles))
-	}
-	fmt.Println()
-
-	// Show staged files first (green)
-	if len(info.StagedFiles) > 0 {
-		fmt.Println("📦 Staged Files (ready to commit):")
-		printFileList(info.StagedFiles, "🟢", "\033[32m", opts.ShowColors)
-		fmt.Println()
-	}
-
-	// Show modified files (yellow)
-	if len(info.ModifiedFiles) > 0 {
-		fmt.Println("✏️  Modified Files:")
-		printFileList(info.ModifiedFiles, "🟡", "\033[33m", opts.ShowColors)
-		fmt.Println()
-	}
-
-	// Show deleted files (red)
-	if len(info.DeletedFiles) > 0 {
-		fmt.Println("🗑️  Deleted Files:")
-		printFileList(info.DeletedFiles, "🔴", "\033[31m", opts.ShowColors)
-		fmt.Println()
-	}
-
-	// Show untracked files (gray)
-	if len(info.UntrackedFiles) > 0 {
-		fmt.Println("❓ Untracked Files:")
-		printFileList(info.UntrackedFiles, "⚫", "\033[37m", opts.ShowColors)
-		fmt.Println()
-	}
-
-	// Show all tracked files if requested (normal text, no special indicators)
-	if opts.ShowAll && len(info.CleanFiles) > 0 {
-		fmt.Println("📁 All Tracked Files (no changes):")
-		printCleanFileList(info.CleanFiles)
-	}
-}
-
-// printFileList prints a list of files with indicators and colors
-func printFileList(files []FileStatus, indicator string, colorCode string, useColors bool) {
-	// Sort files by name
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Path < files[j].Path
-	})
-
-	resetCode := ""
-	if useColors {
-		resetCode = "\033[0m"
-	} else {
-		colorCode = ""
-	}
-
-	for _, file := range files {
-		dirIndicator := ""
-		if file.IsDir {
-			dirIndicator = "/"
-		}
-
-		sizeStr := ""
-		if file.Size > 0 {
-			sizeStr = fmt.Sprintf(" (%s)", formatSize(file.Size))
-		}
-
-		timeStr := ""
-		if file.ModTime != "" {
-			timeStr = " - " + file.ModTime
-		}
-
-		fmt.Printf("  %s%s %s%s%s%s%s\n",
-			colorCode, indicator, file.Path, dirIndicator, sizeStr, resetCode, timeStr)
-	}
-}
-
-// printCleanFileList prints tracked files with no changes (normal text)
-func printCleanFileList(files []FileStatus) {
-	// Sort files by name
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Path < files[j].Path
-	})
-
-	for _, file := range files {
-		dirIndicator := ""
-		if file.IsDir {
-			dirIndicator = "/"
-		}
-
-		sizeStr := ""
-		if file.Size > 0 {
-			sizeStr = fmt.Sprintf(" (%s)", formatSize(file.Size))
-		}
-
-		timeStr := ""
-		if file.ModTime != "" {
-			timeStr = " - " + file.ModTime
-		}
-
-		fmt.Printf("  %s%s%s%s\n", file.Path, dirIndicator, sizeStr, timeStr)
-	}
 }
 
 // formatSize formats file size in human readable format
