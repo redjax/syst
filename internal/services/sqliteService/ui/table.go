@@ -8,15 +8,13 @@ import (
 )
 
 func (m UIModel) buildTable() t.Model {
-	const uiCheckboxCol = "__ui_selected__"
-
 	// reserved keys we never want to show as DB columns
 	reserved := map[string]struct{}{
-		uiCheckboxCol: {},
-		"__selected":  {},
-		"[x]":         {},
-		"_selected":   {},
-		"rowid":       {},
+		"__ui_selected__": {},
+		"__selected":      {},
+		"[x]":             {},
+		"_selected":       {},
+		"rowid":           {},
 	}
 
 	// Filter DB columns (trim & remove reserved)
@@ -43,7 +41,7 @@ func (m UIModel) buildTable() t.Model {
 	}
 
 	// widths
-	totalCols := len(filteredCols) + 1 // +1 for checkbox column
+	totalCols := len(filteredCols)
 	minColWidth := 8
 	usableWidth := m.termWidth - totalCols
 	colWidth := usableWidth / totalCols
@@ -51,31 +49,21 @@ func (m UIModel) buildTable() t.Model {
 		colWidth = minColWidth
 	}
 
-	// column defs: UI checkbox first (label is a space)
-	cols := []t.Column{t.NewColumn(uiCheckboxCol, " ", minColWidth)}
+	// column defs: just the database columns
+	cols := []t.Column{}
 	for _, c := range filteredCols {
 		cols = append(cols, t.NewColumn(c, c, colWidth))
 	}
 
 	// rows
 	var tRows []t.Row
-	for rowIdx, rowData := range m.rows {
+	for _, rowData := range m.rows {
 		row := t.RowData{}
 
-		// checkbox
-		if m.selectedRows[rowIdx] {
-			row[uiCheckboxCol] = "[x]"
-		} else {
-			row[uiCheckboxCol] = "[ ]"
-		}
-
-		for colIdx, colName := range filteredCols {
+		for _, colName := range filteredCols {
 			val := ""
 			if v, ok := rowData[colName]; ok && v != nil {
 				val = fmt.Sprintf("%v", v)
-			}
-			if (colIdx+1) == m.selectedCol && rowIdx == m.selectedIndex {
-				val = "[" + val + "]"
 			}
 			row[colName] = val
 		}

@@ -120,26 +120,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 
-			case "up", "k":
-				if m.selectedIndex > 0 {
-					m.selectedIndex--
-					m.tableComp = m.buildTable()
-				}
-			case "down", "j":
-				if m.selectedIndex < len(m.rows)-1 {
-					m.selectedIndex++
-					m.tableComp = m.buildTable()
-				}
-			case "left", "h":
-				if m.selectedCol > 1 { // skip checkbox col at index 0
-					m.selectedCol--
-					m.tableComp = m.buildTable()
-				}
-			case "right", "l":
-				if m.selectedCol < len(m.columns) {
-					m.selectedCol++
-					m.tableComp = m.buildTable()
-				}
+			case "up", "k", "down", "j", "left", "h", "right", "l":
+				// let the table component handle navigation
+				var cmd tea.Cmd
+				m.tableComp, cmd = m.tableComp.Update(msg)
+				return m, cmd
 
 			case "/":
 				// focus the query input for typing a new SQL
@@ -147,33 +132,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 
 			case " ":
-				// toggle row selection
-				if m.selectedRows[m.selectedIndex] {
-					delete(m.selectedRows, m.selectedIndex)
-				} else {
-					m.selectedRows[m.selectedIndex] = true
-				}
-				m.tableComp = m.buildTable()
+				// let the table component handle row selection
+				var cmd tea.Cmd
+				m.tableComp, cmd = m.tableComp.Update(msg)
+				return m, cmd
 
 			case "e":
-				// expand cell
-				if m.selectedIndex >= 0 && m.selectedIndex < len(m.rows) &&
-					m.selectedCol >= 1 && m.selectedCol < len(m.columns) {
-					colKey := m.columns[m.selectedCol]
-					if val, ok := m.rows[m.selectedIndex][colKey]; ok && val != nil {
-						m.expandRow = m.selectedIndex
-						m.expandCol = colKey
-						m.expandVal = fmt.Sprintf("%v", val)
-
-						// prepare viewport content
-						m.vp.SetContent(m.expandVal)
-						if m.termWidth > 0 && m.termHeight > 0 {
-							m.vp.Width = m.termWidth
-							m.vp.Height = m.termHeight - 6
-						}
-						m.mode = modeExpandCell
-					}
-				}
+				// TODO: implement cell expansion using bubble-table's cursor position
+				// For now, disabled until we can get the current selection from the table component
+				return m, nil
 
 			case "n":
 				if len(m.rows) == m.limit {
