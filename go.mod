@@ -1,6 +1,6 @@
 module github.com/redjax/syst
 
-go 1.24.6
+go 1.25.1
 
 require (
 	github.com/briandowns/spinner v1.23.2

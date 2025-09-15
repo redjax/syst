@@ -52,7 +52,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// If query input is focused, let it handle key updates
 		if m.queryInput.Focused() {
 			var cmd tea.Cmd
-			m.queryInput, cmd = m.queryInput.Update(msg)
+			m.queryInput, _ = m.queryInput.Update(msg)
 			if msg.String() == "enter" {
 				// run query
 				m.query = m.queryInput.Value()
@@ -65,7 +65,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.queryInput.Blur()
 			}
 			// let the viewport handle scroll keys
-			var cmd tea.Cmd
 			m.vp, cmd = m.vp.Update(msg)
 			return m, cmd
 		}
@@ -141,11 +140,6 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.selectedCol++
 					m.tableComp = m.buildTable()
 				}
-
-			case "/":
-				// focus the query input for typing a new SQL
-				m.queryInput.Focus()
-				return m, nil
 
 			case "/":
 				// focus the query input for typing a new SQL
