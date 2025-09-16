@@ -99,6 +99,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch m.importStep {
 			case 0: // File path input
 				if m.importFileInput.Focused() {
+					// Handle tab completion
+					if msg.String() == "tab" {
+						currentPath := m.importFileInput.Value()
+						completed := m.completeFilePath(currentPath)
+						if completed != currentPath {
+							m.importFileInput.SetValue(completed)
+							m.importFileInput.SetCursor(len(completed))
+						}
+						return m, nil
+					}
+
 					var cmd tea.Cmd
 					m.importFileInput, cmd = m.importFileInput.Update(msg)
 					if msg.String() == "enter" {

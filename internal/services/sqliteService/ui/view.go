@@ -290,7 +290,7 @@ func (m UIModel) viewImport() string {
 		b.WriteString("Step 1: File Selection\n")
 		b.WriteString("Enter the path to your CSV file:\n\n")
 		b.WriteString(m.importFileInput.View())
-		b.WriteString("\n\nPress [Enter] to proceed or [Esc] to cancel\n")
+		b.WriteString("\n\nPress [Tab] for path completion | [Enter] to proceed | [Esc] to cancel\n")
 	case 1:
 		b.WriteString("Step 2: Confirmation\n")
 		b.WriteString(fmt.Sprintf("File: %s\n\n", m.importFilePath))

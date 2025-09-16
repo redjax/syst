@@ -2,6 +2,9 @@ package ui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -121,4 +124,85 @@ func (m UIModel) Init() tea.Cmd {
 		return m.loadTablesCmd()
 	}
 	return m.runQueryCmd()
+}
+
+// completeFilePath provides tab completion for file paths
+func (m UIModel) completeFilePath(currentPath string) string {
+	if currentPath == "" {
+		currentPath = "./"
+	}
+
+	// If the path ends with a slash, list directory contents
+	if strings.HasSuffix(currentPath, "/") {
+		dir := currentPath
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return currentPath
+		}
+
+		// Find the first file or directory for completion
+		for _, entry := range entries {
+			name := entry.Name()
+			// Skip hidden files starting with .
+			if strings.HasPrefix(name, ".") {
+				continue
+			}
+			if entry.IsDir() {
+				return currentPath + name + "/"
+			} else if strings.HasSuffix(strings.ToLower(name), ".csv") {
+				return currentPath + name
+			}
+		}
+		return currentPath
+	}
+
+	// Otherwise, try to complete the current partial path
+	dir := filepath.Dir(currentPath)
+	base := filepath.Base(currentPath)
+
+	if dir == "." && !strings.Contains(currentPath, "/") {
+		dir = "./"
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return currentPath
+	}
+
+	var matches []string
+	for _, entry := range entries {
+		name := entry.Name()
+		// Skip hidden files
+		if strings.HasPrefix(name, ".") {
+			continue
+		}
+
+		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(base)) {
+			if entry.IsDir() {
+				matches = append(matches, filepath.Join(dir, name)+"/")
+			} else if strings.HasSuffix(strings.ToLower(name), ".csv") {
+				matches = append(matches, filepath.Join(dir, name))
+			}
+		}
+	}
+
+	if len(matches) == 1 {
+		return matches[0]
+	} else if len(matches) > 1 {
+		// Find common prefix
+		commonPrefix := matches[0]
+		for _, match := range matches[1:] {
+			for i := 0; i < len(commonPrefix) && i < len(match); i++ {
+				if commonPrefix[i] != match[i] {
+					commonPrefix = commonPrefix[:i]
+					break
+				}
+			}
+		}
+		if len(commonPrefix) > len(currentPath) {
+			return commonPrefix
+		}
+	}
+
+	return currentPath
 }
