@@ -18,6 +18,9 @@ var startTable string
 var importDbPath string
 var importCsvPath string
 var importTableName string
+var exportDbPath string
+var exportTableName string
+var exportOutputDir string
 
 func NewSqliteCmd() *cobra.Command {
 	sqliteCmd := &cobra.Command{
@@ -27,6 +30,7 @@ func NewSqliteCmd() *cobra.Command {
 	}
 	sqliteCmd.AddCommand(newOpenCmd())
 	sqliteCmd.AddCommand(newImportCmd())
+	sqliteCmd.AddCommand(newExportCmd())
 	return sqliteCmd
 }
 
@@ -78,6 +82,134 @@ func newImportCmd() *cobra.Command {
 	cmd.MarkFlagRequired("csv")
 	cmd.MarkFlagRequired("table")
 	return cmd
+}
+
+func newExportCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export SQLite table data to CSV",
+		Long:  "Export data from SQLite database tables to CSV files. Export a specific table or all tables.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if exportDbPath == "" {
+				return fmt.Errorf("you must specify a database file with --db")
+			}
+
+			absDbPath, err := filepath.Abs(exportDbPath)
+			if err != nil {
+				return fmt.Errorf("failed to resolve database path: %w", err)
+			}
+
+			absOutputDir := ""
+			if exportOutputDir != "" {
+				absOutputDir, err = filepath.Abs(exportOutputDir)
+				if err != nil {
+					return fmt.Errorf("failed to resolve output directory: %w", err)
+				}
+			} else {
+				absOutputDir = filepath.Dir(absDbPath) // Use DB directory if no output dir specified
+			}
+
+			return performCSVExport(absDbPath, exportTableName, absOutputDir)
+		},
+	}
+
+	cmd.Flags().StringVarP(&exportDbPath, "db", "d", "", "Path to SQLite database file")
+	cmd.Flags().StringVarP(&exportTableName, "table", "t", "", "Table name to export (if empty, exports all tables)")
+	cmd.Flags().StringVarP(&exportOutputDir, "output", "o", "", "Output directory for CSV files (defaults to database directory)")
+	cmd.MarkFlagRequired("db")
+
+	return cmd
+}
+
+func performCSVExport(dbPath, tableName, outputDir string) error {
+	svc, err := sqliteservice.NewSQLiteService(dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer svc.Close()
+
+	var tablesToExport []string
+
+	if tableName != "" {
+		// Export specific table
+		tablesToExport = []string{tableName}
+	} else {
+		// Export all tables
+		tables, err := svc.GetTables()
+		if err != nil {
+			return fmt.Errorf("failed to get table list: %w", err)
+		}
+		if len(tables) == 0 {
+			return fmt.Errorf("no tables found in database")
+		}
+		tablesToExport = tables
+		fmt.Printf("Found %d tables to export: %s\n", len(tables), strings.Join(tables, ", "))
+	}
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
+	totalRows := 0
+	for _, table := range tablesToExport {
+		rows, err := exportTable(svc, table, outputDir)
+		if err != nil {
+			return fmt.Errorf("failed to export table %s: %w", table, err)
+		}
+		totalRows += rows
+	}
+
+	fmt.Printf("✅ Successfully exported %d total rows from %d table(s) to %s\n",
+		totalRows, len(tablesToExport), outputDir)
+
+	return nil
+}
+
+func exportTable(svc *sqliteservice.SQLiteService, tableName, outputDir string) (int, error) {
+	query := fmt.Sprintf("SELECT * FROM %s", tableName)
+	columns, rows, err := svc.Query(query, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query table %s: %w", tableName, err)
+	}
+
+	if len(rows) == 0 {
+		fmt.Printf("⚠️  Table %s is empty, skipping\n", tableName)
+		return 0, nil
+	}
+
+	outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.csv", tableName))
+	file, err := os.Create(outputFile)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create CSV file: %w", err)
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// Write headers
+	if err := writer.Write(columns); err != nil {
+		return 0, fmt.Errorf("failed to write CSV headers: %w", err)
+	}
+
+	// Write data rows
+	for _, row := range rows {
+		record := make([]string, len(columns))
+		for i, col := range columns {
+			if val := row[col]; val != nil {
+				record[i] = fmt.Sprintf("%v", val)
+			} else {
+				record[i] = ""
+			}
+		}
+		if err := writer.Write(record); err != nil {
+			return 0, fmt.Errorf("failed to write CSV row: %w", err)
+		}
+	}
+
+	fmt.Printf("📄 Exported %d rows from table %s to %s\n", len(rows), tableName, outputFile)
+	return len(rows), nil
 }
 
 func performCSVImport(dbPath, csvPath, tableName string) error {
