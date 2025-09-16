@@ -131,6 +131,7 @@ func initialModel(args []string) model {
 		resultsList: resultsList,
 		currentMode: InputMode,
 		searchType:  CommitSearch,
+		tuiHelper:   terminal.NewResponsiveTUIHelper(),
 	}
 }
 
