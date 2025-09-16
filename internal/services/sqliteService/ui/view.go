@@ -288,9 +288,9 @@ func (m UIModel) viewImport() string {
 	switch m.importStep {
 	case 0:
 		b.WriteString("Step 1: File Selection\n")
-		b.WriteString("Press [Enter] to proceed with sample CSV import\n")
-		b.WriteString("(In production, this would show a file picker)\n\n")
-		b.WriteString("Current file: sample_import.csv\n")
+		b.WriteString("Enter the path to your CSV file:\n\n")
+		b.WriteString(m.importFileInput.View())
+		b.WriteString("\n\nPress [Enter] to proceed or [Esc] to cancel\n")
 	case 1:
 		b.WriteString("Step 2: Confirmation\n")
 		b.WriteString(fmt.Sprintf("File: %s\n\n", m.importFilePath))

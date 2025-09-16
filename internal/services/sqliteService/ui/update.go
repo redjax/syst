@@ -92,17 +92,30 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode == modeImport {
 			if msg.Type == tea.KeyEsc {
 				m.mode = modeTable
+				m.importFileInput.Blur()
 				return m, nil
 			}
 
 			switch m.importStep {
 			case 0: // File path input
-				if msg.String() == "enter" {
-					// For now, use a simple hardcoded CSV file for demo
-					// In a real implementation, you'd use a file picker or path input
-					m.importFilePath = "sample_import.csv"
-					m.errMsg = "Import wizard: Press 'y' to confirm import or 'n' to cancel"
-					m.importStep = 1
+				if m.importFileInput.Focused() {
+					var cmd tea.Cmd
+					m.importFileInput, cmd = m.importFileInput.Update(msg)
+					if msg.String() == "enter" {
+						filePath := m.importFileInput.Value()
+						if filePath == "" {
+							filePath = "sample_import.csv" // fallback for demo
+						}
+						m.importFilePath = filePath
+						m.errMsg = "Import wizard: Press 'y' to confirm import or 'n' to cancel"
+						m.importStep = 1
+						m.importFileInput.Blur()
+					}
+					return m, cmd
+				} else {
+					// Auto-focus the input when entering import mode
+					m.importFileInput.Focus()
+					return m, nil
 				}
 			case 1: // Confirmation
 				if msg.String() == "y" {
@@ -111,12 +124,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				} else if msg.String() == "n" {
 					m.mode = modeTable
 					m.errMsg = "Import cancelled"
+					m.importFileInput.SetValue("")
 				}
 			}
 			return m, nil
-		}
-
-		// If query input is focused, let it handle key updates
+		} // If query input is focused, let it handle key updates
 		if m.queryInput.Focused() {
 			var cmd tea.Cmd
 			m.queryInput, _ = m.queryInput.Update(msg)
@@ -304,6 +316,8 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.mode = modeImport
 				m.importStep = 0
 				m.importFilePath = ""
+				m.importFileInput.SetValue("")
+				m.importFileInput.Focus()
 				m.errMsg = "Import wizard: Enter CSV file path"
 				return m, nil
 

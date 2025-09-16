@@ -67,8 +67,9 @@ type UIModel struct {
 	viewsData     []map[string]interface{}
 
 	// import wizard
-	importFilePath string
-	importStep     int // 0=file selection, 1=table selection, 2=column mapping, 3=import
+	importFilePath  string
+	importStep      int // 0=file selection, 1=table selection, 2=column mapping, 3=import
+	importFileInput textinput.Model
 
 	// table component and terminal size
 	tableComp  t.Model
@@ -83,17 +84,25 @@ func NewUIModel(svc *sqliteservice.SQLiteService, startTable string) UIModel {
 	ti.Width = 50
 	ti.Blur()
 
+	// Import file input
+	importInput := textinput.New()
+	importInput.Placeholder = "Enter CSV file path (e.g., ./data.csv)"
+	importInput.CharLimit = 256
+	importInput.Width = 60
+	importInput.Blur()
+
 	// minimal viewport until we get window size
 	vp := viewport.Model{}
 	m := UIModel{
-		svc:           svc,
-		limit:         20,
-		offset:        0,
-		queryInput:    ti,
-		selectedRows:  make(map[int]bool),
-		selectedIndex: 0,
-		selectedCol:   0,
-		vp:            vp,
+		svc:             svc,
+		limit:           20,
+		offset:          0,
+		queryInput:      ti,
+		importFileInput: importInput,
+		selectedRows:    make(map[int]bool),
+		selectedIndex:   0,
+		selectedCol:     0,
+		vp:              vp,
 	}
 
 	if startTable != "" {
