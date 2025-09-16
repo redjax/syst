@@ -129,11 +129,27 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 
-			case "up", "k", "down", "j", "left", "h", "right", "l":
-				// let the table component handle navigation
+			case "up", "k", "down", "j":
+				// let the table component handle row navigation
 				var cmd tea.Cmd
 				m.tableComp, cmd = m.tableComp.Update(msg)
 				return m, cmd
+
+			case "left", "h":
+				// column navigation - move left
+				if m.selectedCol > 0 {
+					m.selectedCol--
+					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
+				}
+				return m, nil
+
+			case "right", "l":
+				// column navigation - move right
+				if m.selectedCol < len(m.columns)-1 {
+					m.selectedCol++
+					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
+				}
+				return m, nil
 
 			case "/":
 				// focus the query input for typing a new SQL
@@ -151,8 +167,27 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd
 
 			case "e":
-				// TODO: implement cell expansion using bubble-table's cursor position
-				// For now, disabled until we can get the current selection from the table component
+				// Get the currently highlighted row and expand the current column
+				highlightedRow := m.tableComp.HighlightedRow()
+				if len(m.columns) > 0 && m.selectedCol < len(m.columns) && len(highlightedRow.Data) > 0 {
+					cellKey := m.columns[m.selectedCol]
+					var cellContent string
+
+					if val, exists := highlightedRow.Data[cellKey]; exists {
+						cellContent = fmt.Sprintf("%v", val)
+					} else {
+						cellContent = "(no data)"
+					}
+
+					m.expandCol = cellKey
+					m.expandVal = cellContent
+					expandContent := fmt.Sprintf("Column: %s\n\nContent:\n%s", cellKey, cellContent)
+					m.vp.SetContent(expandContent)
+					m.mode = modeExpandCell
+					m.errMsg = fmt.Sprintf("INFO: Expanded cell %s", cellKey)
+				} else {
+					m.errMsg = "INFO: No cell content to expand"
+				}
 				return m, nil
 
 			case "n":
@@ -358,8 +393,8 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.selectedIndex >= len(m.rows) {
 			m.selectedIndex = 0
 		}
-		if m.selectedCol < 1 || m.selectedCol >= len(m.columns) {
-			m.selectedCol = 1
+		if m.selectedCol < 0 || m.selectedCol >= len(m.columns) {
+			m.selectedCol = 0
 		}
 
 		return m, nil

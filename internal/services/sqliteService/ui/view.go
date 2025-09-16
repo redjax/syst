@@ -55,7 +55,13 @@ func (m UIModel) viewTable() string {
 
 	// table component view
 	b.WriteString(m.tableComp.View())
-	b.WriteString("\nSpace: select row | e: expand cell | n/p: page | dd: delete | /: query | q: quit\n")
+
+	// Show current column position
+	if len(m.columns) > 0 && m.selectedCol < len(m.columns) {
+		b.WriteString(fmt.Sprintf("\nCurrent column: %s (%d/%d)\n", m.columns[m.selectedCol], m.selectedCol+1, len(m.columns)))
+	}
+
+	b.WriteString("↑/↓: row | ←/→: column | Space: select row | e: expand cell | n/p: page | dd: delete | /: query | q: quit\n")
 	return b.String()
 }
 
