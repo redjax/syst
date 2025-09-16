@@ -45,21 +45,11 @@ const (
 	DetailMode
 )
 
-type SearchType int
-
-const (
-	CommitSearch SearchType = iota
-	FileSearch
-	ContentSearch
-	AuthorSearch
-)
-
 type model struct {
 	searchInput    textinput.Model
 	resultsList    list.Model
 	spinner        spinner.Model
 	currentMode    SearchMode
-	searchType     SearchType
 	searchQuery    string
 	results        []SearchResult
 	selectedResult *SearchResult
@@ -113,10 +103,6 @@ var (
 			Foreground(lipgloss.Color("196")).
 			Bold(true)
 
-	typeStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("99")).
-			Bold(true)
-
 	matchStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("226")).
 			Background(lipgloss.Color("235")).
@@ -150,7 +136,6 @@ func initialModel(args []string) model {
 		resultsList: resultsList,
 		spinner:     s,
 		currentMode: InputMode,
-		searchType:  CommitSearch,
 		tuiHelper:   terminal.NewResponsiveTUIHelper(),
 	}
 }
@@ -182,49 +167,6 @@ func performAdvancedSearch(query string) tea.Msg {
 
 	var allResults []SearchResult
 
-	// Send progress updates
-	progressChan := make(chan string, 10)
-	go func() {
-		defer close(progressChan)
-
-		// Search git repository
-		progressChan <- "Searching git commits..."
-		if repo, err := git.PlainOpen("."); err == nil {
-			// Search commits
-			if commitResults, _ := searchCommits(repo, query); len(commitResults) > 0 {
-				allResults = append(allResults, commitResults...)
-			}
-
-			progressChan <- "Searching file names in git history..."
-			// Search historical file names
-			if fileResults, _ := searchHistoricalFiles(repo, query); len(fileResults) > 0 {
-				allResults = append(allResults, fileResults...)
-			}
-
-			progressChan <- "Searching file content in git history..."
-			// Search content in git history
-			if contentResults, _ := searchHistoricalContent(repo, query); len(contentResults) > 0 {
-				allResults = append(allResults, contentResults...)
-			}
-
-			progressChan <- "Searching current files..."
-			// Search current filesystem
-			if currentResults, _ := searchCurrentFiles(query); len(currentResults) > 0 {
-				allResults = append(allResults, currentResults...)
-			}
-
-			progressChan <- "Searching authors..."
-			// Search authors
-			if authorResults, _ := searchAuthors(repo, query); len(authorResults) > 0 {
-				allResults = append(allResults, authorResults...)
-			}
-		}
-
-		progressChan <- "Finalizing results..."
-	}()
-
-	// For now, we'll do a simple blocking search
-	// In a real implementation, you'd want to handle progress updates
 	repo, err := git.PlainOpen(".")
 	if err != nil {
 		return errMsg{err}
@@ -244,43 +186,6 @@ func performAdvancedSearch(query string) tea.Msg {
 	allResults = append(allResults, authorResults...)
 
 	return searchCompletedMsg{results: allResults}
-}
-
-func performSearch(query string, searchType SearchType) tea.Msg {
-	repo, err := git.PlainOpen(".")
-	if err != nil {
-		return errMsg{err}
-	}
-
-	var results []SearchResult
-
-	switch searchType {
-	case CommitSearch:
-		results, err = searchCommits(repo, query)
-	case FileSearch:
-		results, err = searchFiles(repo, query)
-	case ContentSearch:
-		results, err = searchContent(repo, query)
-	case AuthorSearch:
-		results, err = searchAuthors(repo, query)
-	default:
-		// Search all types
-		commitResults, _ := searchCommits(repo, query)
-		fileResults, _ := searchFiles(repo, query)
-		contentResults, _ := searchContent(repo, query)
-		authorResults, _ := searchAuthors(repo, query)
-
-		results = append(results, commitResults...)
-		results = append(results, fileResults...)
-		results = append(results, contentResults...)
-		results = append(results, authorResults...)
-	}
-
-	if err != nil {
-		return errMsg{err}
-	}
-
-	return searchCompletedMsg{results: results}
 }
 
 func searchCommits(repo *git.Repository, query string) ([]SearchResult, error) {
@@ -311,117 +216,6 @@ func searchCommits(repo *git.Repository, query string) ([]SearchResult, error) {
 				Content:   c.Message,
 				Commit:    c,
 			})
-		}
-		return nil
-	})
-
-	return results, err
-}
-
-func searchFiles(repo *git.Repository, query string) ([]SearchResult, error) {
-	var results []SearchResult
-	queryLower := strings.ToLower(query)
-
-	ref, err := repo.Head()
-	if err != nil {
-		return results, err
-	}
-
-	commit, err := repo.CommitObject(ref.Hash())
-	if err != nil {
-		return results, err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return results, err
-	}
-
-	err = tree.Files().ForEach(func(f *object.File) error {
-		filenameLower := strings.ToLower(f.Name)
-		if strings.Contains(filenameLower, queryLower) {
-			results = append(results, SearchResult{
-				Type:      "file",
-				ItemTitle: fmt.Sprintf("📄 %s", f.Name),
-				ItemDesc:  fmt.Sprintf("File match • Size: %d bytes", f.Size),
-				FilePath:  f.Name,
-				Content:   f.Name,
-			})
-		}
-		return nil
-	})
-
-	return results, err
-}
-
-func searchContent(repo *git.Repository, query string) ([]SearchResult, error) {
-	var results []SearchResult
-	queryLower := strings.ToLower(query)
-
-	// Create regex for better matching
-	regex, err := regexp.Compile("(?i)" + regexp.QuoteMeta(query))
-	if err != nil {
-		regex = nil
-	}
-
-	ref, err := repo.Head()
-	if err != nil {
-		return results, err
-	}
-
-	commit, err := repo.CommitObject(ref.Hash())
-	if err != nil {
-		return results, err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return results, err
-	}
-
-	err = tree.Files().ForEach(func(f *object.File) error {
-		// Skip binary files and large files
-		if f.Size > 1024*1024 { // 1MB limit
-			return nil
-		}
-
-		content, err := f.Contents()
-		if err != nil {
-			return nil
-		}
-
-		// Check if file is likely binary
-		if strings.Contains(content, "\x00") {
-			return nil
-		}
-
-		contentLower := strings.ToLower(content)
-		if strings.Contains(contentLower, queryLower) {
-			lines := strings.Split(content, "\n")
-			for i, line := range lines {
-				lineLower := strings.ToLower(line)
-				if strings.Contains(lineLower, queryLower) {
-					// Highlight the match
-					highlightedLine := line
-					if regex != nil {
-						highlightedLine = regex.ReplaceAllStringFunc(line, func(match string) string {
-							return matchStyle.Render(match)
-						})
-					}
-
-					results = append(results, SearchResult{
-						Type:       "content",
-						ItemTitle:  fmt.Sprintf("🔍 %s:%d", f.Name, i+1),
-						ItemDesc:   fmt.Sprintf("Content match • Line %d", i+1),
-						FilePath:   f.Name,
-						LineNumber: i + 1,
-						Content:    strings.TrimSpace(highlightedLine),
-					})
-
-					// Limit results per file to avoid spam
-					break
-				}
-			}
 		}
 		return nil
 	})
@@ -491,7 +285,7 @@ func searchHistoricalFiles(repo *git.Repository, query string) ([]SearchResult, 
 			return nil // Continue with other commits
 		}
 
-		err = tree.Files().ForEach(func(f *object.File) error {
+		_ = tree.Files().ForEach(func(f *object.File) error {
 			filenameLower := strings.ToLower(f.Name)
 			if strings.Contains(filenameLower, queryLower) && !seenFiles[f.Name] {
 				seenFiles[f.Name] = true
@@ -544,7 +338,7 @@ func searchHistoricalContent(repo *git.Repository, query string) ([]SearchResult
 			return nil
 		}
 
-		err = tree.Files().ForEach(func(f *object.File) error {
+		_ = tree.Files().ForEach(func(f *object.File) error {
 			// Skip large files and binary files
 			if f.Size > 512*1024 { // 512KB limit
 				return nil
@@ -767,10 +561,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						},
 					)
 				}
-			case "tab":
-				// Cycle through search types
-				m.searchType = (m.searchType + 1) % 4
-				return m, nil
 			default:
 				var cmd tea.Cmd
 				m.searchInput, cmd = m.searchInput.Update(msg)
@@ -833,14 +623,11 @@ func (m model) View() string {
 
 	switch m.currentMode {
 	case InputMode:
-		searchTypeText := []string{"All", "Commits", "Files", "Content", "Authors"}[m.searchType]
-
 		return fmt.Sprintf(
-			"%s\n\n%s\n%s\n\n%s",
+			"%s\n\n%s\n\n%s",
 			titleStyle.Render("🔍 Advanced Repository Search"),
 			searchStyle.Render("Search: "+m.searchInput.View()),
-			typeStyle.Render(fmt.Sprintf("Type: %s (tab to change)", searchTypeText)),
-			helpStyle.Render("enter: search • tab: change type • q: quit"),
+			helpStyle.Render("enter: search • q: quit"),
 		)
 
 	case DetailMode:
