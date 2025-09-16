@@ -63,22 +63,34 @@ func (s *SQLiteService) QueryWithPagination(query string, args []interface{}, li
 	return cols, results, nil
 }
 
-// DeleteRow deletes from a table by rowid
+// DeleteRow deletes from a table by rowid (or id if rowid not available)
 func (s *SQLiteService) DeleteRow(table string, rowid int64) error {
 	if strings.TrimSpace(table) == "" {
 		return fmt.Errorf("table name cannot be empty")
 	}
+
+	// Try rowid first
 	query := fmt.Sprintf("DELETE FROM %s WHERE rowid = ?", table)
 	res, err := s.db.Exec(query, rowid)
+	if err == nil {
+		affected, err := res.RowsAffected()
+		if err == nil && affected > 0 {
+			return nil
+		}
+	}
+
+	// If rowid failed, try id column
+	query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", table)
+	res, err = s.db.Exec(query, rowid)
 	if err != nil {
-		return err
+		return fmt.Errorf("delete failed with both rowid and id: %w", err)
 	}
 	affected, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
 	if affected == 0 {
-		return fmt.Errorf("no row deleted; rowid may not exist")
+		return fmt.Errorf("no row deleted; id %d may not exist", rowid)
 	}
 	return nil
 }

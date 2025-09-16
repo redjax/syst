@@ -60,12 +60,19 @@ func (m UIModel) buildTable() t.Model {
 	for _, rowData := range m.rows {
 		row := t.RowData{}
 
-		for _, colName := range filteredCols {
-			val := ""
-			if v, ok := rowData[colName]; ok && v != nil {
-				val = fmt.Sprintf("%v", v)
+		// Include ALL data from the original row (including rowid for deletion)
+		for k, v := range rowData {
+			if k == "rowid" {
+				// Keep rowid as-is for deletion
+				row[k] = v
+			} else {
+				// Format display columns as strings
+				val := ""
+				if v != nil {
+					val = fmt.Sprintf("%v", v)
+				}
+				row[k] = val
 			}
-			row[colName] = val
 		}
 
 		tRows = append(tRows, t.NewRow(row))
