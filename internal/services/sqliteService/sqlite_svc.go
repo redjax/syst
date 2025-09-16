@@ -163,3 +163,9 @@ func (s *SQLiteService) DropTable(table string) error {
 	}
 	return nil
 }
+
+// Exec executes a statement without returning rows
+func (s *SQLiteService) Exec(query string, args ...interface{}) error {
+_, err := s.db.Exec(query, args...)
+return err
+}
