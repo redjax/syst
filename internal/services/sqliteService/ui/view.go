@@ -56,9 +56,36 @@ func (m UIModel) viewTable() string {
 	// table component view
 	b.WriteString(m.tableComp.View())
 
-	// Show current column position
+	// Show current cell information with prominent visual indicator
 	if len(m.columns) > 0 && m.selectedCol < len(m.columns) {
-		b.WriteString(fmt.Sprintf("\nCurrent column: %s (%d/%d)\n", m.columns[m.selectedCol], m.selectedCol+1, len(m.columns)))
+		currentCol := m.columns[m.selectedCol]
+		highlightedRow := m.tableComp.HighlightedRow()
+
+		var cellValue string
+		if val, exists := highlightedRow.Data[currentCol]; exists && val != nil {
+			cellValue = fmt.Sprintf("%v", val)
+			// Truncate long values for display
+			if len(cellValue) > 40 {
+				cellValue = cellValue[:37] + "..."
+			}
+		} else {
+			cellValue = "(empty)"
+		}
+
+		// Get row ID for reference (try rowid first, then id)
+		var rowRef string
+		if val, exists := highlightedRow.Data["rowid"]; exists && val != nil {
+			rowRef = fmt.Sprintf("rowid:%v", val)
+		} else if val, exists := highlightedRow.Data["id"]; exists && val != nil {
+			rowRef = fmt.Sprintf("id:%v", val)
+		} else {
+			rowRef = "row:?"
+		}
+
+		b.WriteString("\n" + strings.Repeat("═", 80) + "\n")
+		b.WriteString(fmt.Sprintf("📍 CURSOR POSITION: Row %d/%d (%s) | Column: %s (%d/%d) | Value: %q\n",
+			m.selectedIndex+1, len(m.rows), rowRef, currentCol, m.selectedCol+1, len(m.columns), cellValue))
+		b.WriteString(strings.Repeat("═", 80) + "\n")
 	}
 
 	b.WriteString("↑/↓: row | ←/→: column | Space: select row | e: expand cell | n/p: page | dd: delete | /: query | q: quit\n")

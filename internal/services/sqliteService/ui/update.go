@@ -129,10 +129,22 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 
-			case "up", "k", "down", "j":
-				// let the table component handle row navigation
+			case "up", "k":
+				// row navigation - move up
 				var cmd tea.Cmd
 				m.tableComp, cmd = m.tableComp.Update(msg)
+				if m.selectedIndex > 0 {
+					m.selectedIndex--
+				}
+				return m, cmd
+
+			case "down", "j":
+				// row navigation - move down
+				var cmd tea.Cmd
+				m.tableComp, cmd = m.tableComp.Update(msg)
+				if m.selectedIndex < len(m.rows)-1 {
+					m.selectedIndex++
+				}
 				return m, cmd
 
 			case "left", "h":
