@@ -142,7 +142,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case " ":
 				// let the table component handle row selection
-				m.errMsg = "DEBUG: Space pressed, delegating to table"
+				m.errMsg = "INFO: Space pressed, delegating to table"
 				var cmd tea.Cmd
 				m.tableComp, cmd = m.tableComp.Update(msg)
 				// Check selection after update
@@ -238,7 +238,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// Get selected rows from the bubble-table component
 				selectedRows := m.tableComp.SelectedRows()
-				m.errMsg = fmt.Sprintf("Capital D DEBUG: Found %d selected rows", len(selectedRows))
+				m.errMsg = fmt.Sprintf("Capital D INFO: Found %d selected rows", len(selectedRows))
 
 				if len(selectedRows) > 0 {
 					// Process selected rows
@@ -282,11 +282,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				if len(rowIDs) > 0 {
-					m.errMsg = fmt.Sprintf("Capital D DEBUG: Deleting %d rows with IDs: %v", len(rowIDs), rowIDs)
+					m.errMsg = fmt.Sprintf("Capital D INFO: Deleting %d rows with IDs: %v", len(rowIDs), rowIDs)
 					m.loading = true
 					return m, m.deleteRowsCmd(rowIDs)
 				} else {
-					m.errMsg = "Capital D DEBUG: No rows to delete - no valid rowIDs found"
+					m.errMsg = "Capital D INFO: No rows to delete - no valid rowIDs found"
 				}
 			case "S": // Capital S to show current selections (testing)
 				selectedRows := m.tableComp.SelectedRows()
@@ -304,7 +304,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// -------- Query Results Loaded --------
 	case queryResultMsg:
-		// DEBUG: Show raw query results
+		// INFO: Show raw query results
 		if len(msg.rows) > 0 {
 			rawKeys := make([]string, 0, len(msg.rows[0]))
 			for k := range msg.rows[0] {

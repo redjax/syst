@@ -22,7 +22,7 @@ func (m UIModel) viewLauncher() string {
 	var b strings.Builder
 	b.WriteString("SQLite Table Launcher\n\n")
 	if m.errMsg != "" {
-		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
+		b.WriteString(fmt.Sprintf("%s\n\n", m.errMsg))
 	}
 	if len(m.tables) == 0 {
 		b.WriteString("(no tables)\n\n")
@@ -45,7 +45,7 @@ func (m UIModel) viewTable() string {
 	b.WriteString("SQL> " + m.queryInput.View() + "\n\n")
 
 	if m.errMsg != "" {
-		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
+		b.WriteString(fmt.Sprintf("%s\n\n", m.errMsg))
 	}
 
 	if m.loading {
