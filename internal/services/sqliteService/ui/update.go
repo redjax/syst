@@ -58,6 +58,36 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		// If in schema/info/indexes/views mode, handle ESC to return to table
+		if m.mode == modeSchema || m.mode == modeTableInfo || m.mode == modeIndexes || m.mode == modeViews {
+			if msg.Type == tea.KeyEsc {
+				m.mode = modeTable
+				return m, nil
+			}
+			// Allow navigation between different info modes
+			switch msg.String() {
+			case "s":
+				m.loading = true
+				m.mode = modeSchema
+				return m, m.loadSchemaCmd(m.tableName)
+			case "i":
+				m.loading = true
+				m.mode = modeTableInfo
+				return m, m.loadTableInfoCmd(m.tableName)
+			case "I":
+				m.loading = true
+				m.mode = modeIndexes
+				return m, m.loadIndexesCmd()
+			case "v":
+				m.loading = true
+				m.mode = modeViews
+				return m, m.loadViewsCmd()
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
+			return m, nil
+		}
+
 		// If query input is focused, let it handle key updates
 		if m.queryInput.Focused() {
 			var cmd tea.Cmd
@@ -201,6 +231,30 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.errMsg = "INFO: No cell content to expand"
 				}
 				return m, nil
+
+			case "s":
+				// Show table schema
+				m.loading = true
+				m.mode = modeSchema
+				return m, m.loadSchemaCmd(m.tableName)
+
+			case "i":
+				// Show table info
+				m.loading = true
+				m.mode = modeTableInfo
+				return m, m.loadTableInfoCmd(m.tableName)
+
+			case "I":
+				// Show database indexes
+				m.loading = true
+				m.mode = modeIndexes
+				return m, m.loadIndexesCmd()
+
+			case "v":
+				// Show database views
+				m.loading = true
+				m.mode = modeViews
+				return m, m.loadViewsCmd()
 
 			case "n":
 				if len(m.rows) == m.limit {
@@ -433,6 +487,50 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tablesLoadedMsg:
 		m.tables = msg
+		m.loading = false
+		return m, nil
+
+	case schemaLoadedMsg:
+		if msg.err != nil {
+			m.errMsg = msg.err.Error()
+			m.loading = false
+			m.mode = modeTable
+			return m, nil
+		}
+		m.schemaInfo = msg.schema
+		m.loading = false
+		return m, nil
+
+	case tableInfoLoadedMsg:
+		if msg.err != nil {
+			m.errMsg = msg.err.Error()
+			m.loading = false
+			m.mode = modeTable
+			return m, nil
+		}
+		m.tableInfoData = msg.info
+		m.loading = false
+		return m, nil
+
+	case indexesLoadedMsg:
+		if msg.err != nil {
+			m.errMsg = msg.err.Error()
+			m.loading = false
+			m.mode = modeTable
+			return m, nil
+		}
+		m.indexesData = msg.indexes
+		m.loading = false
+		return m, nil
+
+	case viewsLoadedMsg:
+		if msg.err != nil {
+			m.errMsg = msg.err.Error()
+			m.loading = false
+			m.mode = modeTable
+			return m, nil
+		}
+		m.viewsData = msg.views
 		m.loading = false
 		return m, nil
 

@@ -16,6 +16,10 @@ const (
 	modeLauncher viewMode = iota
 	modeTable
 	modeExpandCell
+	modeSchema
+	modeTableInfo
+	modeIndexes
+	modeViews
 )
 
 type UIModel struct {
@@ -54,6 +58,12 @@ type UIModel struct {
 	expandCol string
 	expandVal string
 	vp        viewport.Model
+
+	// schema and metadata
+	schemaInfo    []map[string]interface{}
+	tableInfoData []map[string]interface{}
+	indexesData   []map[string]interface{}
+	viewsData     []map[string]interface{}
 
 	// table component and terminal size
 	tableComp  t.Model

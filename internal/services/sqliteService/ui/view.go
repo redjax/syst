@@ -13,6 +13,14 @@ func (m UIModel) View() string {
 		return m.viewTable()
 	case modeExpandCell:
 		return m.viewExpandedCell()
+	case modeSchema:
+		return m.viewSchema()
+	case modeTableInfo:
+		return m.viewTableInfo()
+	case modeIndexes:
+		return m.viewIndexes()
+	case modeViews:
+		return m.viewViews()
 	default:
 		return ""
 	}
@@ -88,7 +96,7 @@ func (m UIModel) viewTable() string {
 		b.WriteString(strings.Repeat("═", 80) + "\n")
 	}
 
-	b.WriteString("↑/↓: row | ←/→: column | Space: select row | e: expand cell | n/p: page | dd: delete | /: query | q: quit\n")
+	b.WriteString("↑/↓: row | ←/→: column | Space: select | e: expand | s: schema | i: info | I: indexes | v: views | dd: delete | /: query | q: quit\n")
 	return b.String()
 }
 
@@ -97,5 +105,171 @@ func (m UIModel) viewExpandedCell() string {
 	b.WriteString(fmt.Sprintf("Expanded value - row %d, column %q\n\n", m.expandRow+1, m.expandCol))
 	b.WriteString(m.vp.View())
 	b.WriteString("\n[esc] to return\n")
+	return b.String()
+}
+
+func (m UIModel) viewSchema() string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("📋 Schema: %s (Esc back)\n\n", m.tableName))
+
+	if m.errMsg != "" {
+		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
+	}
+
+	if m.loading {
+		b.WriteString("Loading schema...\n")
+		return b.String()
+	}
+
+	if len(m.schemaInfo) == 0 {
+		b.WriteString("No schema information available.\n")
+	} else {
+		b.WriteString("┌─────┬──────────────────┬──────────────┬─────────┬─────────────┬────────┐\n")
+		b.WriteString("│ Pos │ Column Name      │ Data Type    │ NotNull │ Default     │ PK     │\n")
+		b.WriteString("├─────┼──────────────────┼──────────────┼─────────┼─────────────┼────────┤\n")
+
+		for _, row := range m.schemaInfo {
+			cid := fmt.Sprintf("%v", row["cid"])
+			name := fmt.Sprintf("%v", row["name"])
+			dataType := fmt.Sprintf("%v", row["type"])
+			notNull := fmt.Sprintf("%v", row["notnull"])
+			defaultVal := fmt.Sprintf("%v", row["dflt_value"])
+			pk := fmt.Sprintf("%v", row["pk"])
+
+			if defaultVal == "<nil>" {
+				defaultVal = ""
+			}
+
+			// Truncate long values
+			if len(name) > 16 {
+				name = name[:13] + "..."
+			}
+			if len(dataType) > 12 {
+				dataType = dataType[:9] + "..."
+			}
+			if len(defaultVal) > 11 {
+				defaultVal = defaultVal[:8] + "..."
+			}
+
+			b.WriteString(fmt.Sprintf("│ %-3s │ %-16s │ %-12s │ %-7s │ %-11s │ %-6s │\n",
+				cid, name, dataType, notNull, defaultVal, pk))
+		}
+		b.WriteString("└─────┴──────────────────┴──────────────┴─────────┴─────────────┴────────┘\n")
+	}
+
+	b.WriteString("\n[Esc] back to table | s: schema | i: table info | I: indexes | v: views\n")
+	return b.String()
+}
+
+func (m UIModel) viewTableInfo() string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("ℹ️  Table Info: %s (Esc back)\n\n", m.tableName))
+
+	if m.errMsg != "" {
+		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
+	}
+
+	if m.loading {
+		b.WriteString("Loading table info...\n")
+		return b.String()
+	}
+
+	if len(m.tableInfoData) == 0 {
+		b.WriteString("No table information available.\n")
+	} else {
+		for _, row := range m.tableInfoData {
+			b.WriteString(fmt.Sprintf("Table Name: %v\n", row["table_name"]))
+			b.WriteString(fmt.Sprintf("Row Count:  %v\n", row["row_count"]))
+			b.WriteString(fmt.Sprintf("Exists:     %v\n", row["exists_check"]))
+		}
+	}
+
+	b.WriteString("\n[Esc] back to table | s: schema | i: table info | I: indexes | v: views\n")
+	return b.String()
+}
+
+func (m UIModel) viewIndexes() string {
+	var b strings.Builder
+	b.WriteString("🗂️  Database Indexes (Esc back)\n\n")
+
+	if m.errMsg != "" {
+		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
+	}
+
+	if m.loading {
+		b.WriteString("Loading indexes...\n")
+		return b.String()
+	}
+
+	if len(m.indexesData) == 0 {
+		b.WriteString("No indexes found.\n")
+	} else {
+		b.WriteString("┌────────────────────────┬────────────────────────┬──────────────────────────────┐\n")
+		b.WriteString("│ Index Name             │ Table Name             │ SQL Definition               │\n")
+		b.WriteString("├────────────────────────┼────────────────────────┼──────────────────────────────┤\n")
+
+		for _, row := range m.indexesData {
+			name := fmt.Sprintf("%v", row["name"])
+			tableName := fmt.Sprintf("%v", row["table_name"])
+			sql := fmt.Sprintf("%v", row["sql"])
+
+			// Truncate long values
+			if len(name) > 22 {
+				name = name[:19] + "..."
+			}
+			if len(tableName) > 22 {
+				tableName = tableName[:19] + "..."
+			}
+			if len(sql) > 28 {
+				sql = sql[:25] + "..."
+			}
+
+			b.WriteString(fmt.Sprintf("│ %-22s │ %-22s │ %-28s │\n", name, tableName, sql))
+		}
+		b.WriteString("└────────────────────────┴────────────────────────┴──────────────────────────────┘\n")
+	}
+
+	b.WriteString("\n[Esc] back to table | s: schema | i: table info | I: indexes | v: views\n")
+	return b.String()
+}
+
+func (m UIModel) viewViews() string {
+	var b strings.Builder
+	b.WriteString("👁️  Database Views (Esc back)\n\n")
+
+	if m.errMsg != "" {
+		b.WriteString(fmt.Sprintf("Error: %s\n\n", m.errMsg))
+	}
+
+	if m.loading {
+		b.WriteString("Loading views...\n")
+		return b.String()
+	}
+
+	if len(m.viewsData) == 0 {
+		b.WriteString("No views found.\n")
+	} else {
+		b.WriteString("┌────────────────────────┬─────────────────────────────────────────────────────────┐\n")
+		b.WriteString("│ View Name              │ SQL Definition                                              │\n")
+		b.WriteString("├────────────────────────┼─────────────────────────────────────────────────────────┤\n")
+
+		for _, row := range m.viewsData {
+			name := fmt.Sprintf("%v", row["name"])
+			sql := fmt.Sprintf("%v", row["sql"])
+
+			// Truncate long values
+			if len(name) > 22 {
+				name = name[:19] + "..."
+			}
+			if len(sql) > 55 {
+				sql = sql[:52] + "..."
+			}
+
+			b.WriteString(fmt.Sprintf("│ %-22s │ %-55s │\n", name, sql))
+		}
+		b.WriteString("└────────────────────────┴─────────────────────────────────────────────────────────┘\n")
+	}
+
+	b.WriteString("\n[Esc] back to table | s: schema | i: table info | I: indexes | v: views\n")
 	return b.String()
 }

@@ -63,6 +63,42 @@ func (s *SQLiteService) QueryWithPagination(query string, args []interface{}, li
 	return cols, results, nil
 }
 
+// Query runs a query without pagination and returns columns, rows
+func (s *SQLiteService) Query(query string, args []interface{}) ([]string, []map[string]interface{}, error) {
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		columns := make([]interface{}, len(cols))
+		columnPointers := make([]interface{}, len(cols))
+		for i := range columns {
+			columnPointers[i] = &columns[i]
+		}
+		if err := rows.Scan(columnPointers...); err != nil {
+			return nil, nil, err
+		}
+		rowMap := make(map[string]interface{})
+		for i, colName := range cols {
+			val := columnPointers[i].(*interface{})
+			rowMap[colName] = *val
+		}
+		results = append(results, rowMap)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	return cols, results, nil
+}
+
 // DeleteRow deletes from a table by rowid (or id if rowid not available)
 func (s *SQLiteService) DeleteRow(table string, rowid int64) error {
 	if strings.TrimSpace(table) == "" {
