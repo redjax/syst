@@ -8,5 +8,11 @@ syst
 syst.*
 *.exe
 
+*.db
+*.sqlite
+*.sqlite3
+
+*.csv
+
 !scripts/
 !scripts/build/
