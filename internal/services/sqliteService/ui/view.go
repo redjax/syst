@@ -21,6 +21,8 @@ func (m UIModel) View() string {
 		return m.viewIndexes()
 	case modeViews:
 		return m.viewViews()
+	case modeImport:
+		return m.viewImport()
 	default:
 		return ""
 	}
@@ -96,7 +98,8 @@ func (m UIModel) viewTable() string {
 		b.WriteString(strings.Repeat("═", 80) + "\n")
 	}
 
-	b.WriteString("↑/↓: row | ←/→: column | Space: select | e: expand | s: schema | i: info | I: indexes | v: views | dd: delete | /: query | q: quit\n")
+	b.WriteString("↑/↓: row | ←/→: column | Space: select | e: expand | x: export table | X: export selected | Ctrl+S: save results\n")
+	b.WriteString("s: schema | i: info | I: indexes | v: views | dd: delete | /: query | m: import CSV | q: quit\n")
 	return b.String()
 }
 
@@ -271,5 +274,30 @@ func (m UIModel) viewViews() string {
 	}
 
 	b.WriteString("\n[Esc] back to table | s: schema | i: table info | I: indexes | v: views\n")
+	return b.String()
+}
+
+func (m UIModel) viewImport() string {
+	var b strings.Builder
+	b.WriteString("📁 CSV Import Wizard\n\n")
+
+	if m.errMsg != "" {
+		b.WriteString(fmt.Sprintf("%s\n\n", m.errMsg))
+	}
+
+	switch m.importStep {
+	case 0:
+		b.WriteString("Step 1: File Selection\n")
+		b.WriteString("Press [Enter] to proceed with sample CSV import\n")
+		b.WriteString("(In production, this would show a file picker)\n\n")
+		b.WriteString("Current file: sample_import.csv\n")
+	case 1:
+		b.WriteString("Step 2: Confirmation\n")
+		b.WriteString(fmt.Sprintf("File: %s\n\n", m.importFilePath))
+		b.WriteString("This will create a new table with the CSV data.\n")
+		b.WriteString("Press [y] to confirm import or [n] to cancel\n")
+	}
+
+	b.WriteString("\n[Esc] Cancel and return to table view\n")
 	return b.String()
 }

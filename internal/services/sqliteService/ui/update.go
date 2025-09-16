@@ -88,6 +88,34 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// If in import mode, handle import wizard steps
+		if m.mode == modeImport {
+			if msg.Type == tea.KeyEsc {
+				m.mode = modeTable
+				return m, nil
+			}
+
+			switch m.importStep {
+			case 0: // File path input
+				if msg.String() == "enter" {
+					// For now, use a simple hardcoded CSV file for demo
+					// In a real implementation, you'd use a file picker or path input
+					m.importFilePath = "sample_import.csv"
+					m.errMsg = "Import wizard: Press 'y' to confirm import or 'n' to cancel"
+					m.importStep = 1
+				}
+			case 1: // Confirmation
+				if msg.String() == "y" {
+					m.loading = true
+					return m, m.importCSVCmd()
+				} else if msg.String() == "n" {
+					m.mode = modeTable
+					m.errMsg = "Import cancelled"
+				}
+			}
+			return m, nil
+		}
+
 		// If query input is focused, let it handle key updates
 		if m.queryInput.Focused() {
 			var cmd tea.Cmd
@@ -255,6 +283,29 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.loading = true
 				m.mode = modeViews
 				return m, m.loadViewsCmd()
+
+			case "x":
+				// Export current table/query results to CSV
+				m.loading = true
+				return m, m.exportTableToCSVCmd()
+
+			case "X":
+				// Export selected rows to CSV
+				m.loading = true
+				return m, m.exportSelectedToCSVCmd()
+
+			case "ctrl+s":
+				// Save current query results to file
+				m.loading = true
+				return m, m.saveQueryResultsCmd()
+
+			case "m":
+				// Start import wizard
+				m.mode = modeImport
+				m.importStep = 0
+				m.importFilePath = ""
+				m.errMsg = "Import wizard: Enter CSV file path"
+				return m, nil
 
 			case "n":
 				if len(m.rows) == m.limit {
@@ -532,6 +583,27 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.viewsData = msg.views
 		m.loading = false
+		return m, nil
+
+	case exportDoneMsg:
+		m.loading = false
+		if msg.err != nil {
+			m.errMsg = fmt.Sprintf("Export failed: %s", msg.err.Error())
+		} else {
+			m.errMsg = fmt.Sprintf("✅ Exported %d rows to: %s", msg.rowCount, msg.filename)
+		}
+		return m, nil
+
+	case importDoneMsg:
+		m.loading = false
+		m.mode = modeTable
+		if msg.err != nil {
+			m.errMsg = fmt.Sprintf("Import failed: %s", msg.err.Error())
+		} else {
+			m.errMsg = fmt.Sprintf("✅ Imported %d rows into table: %s", msg.rowCount, msg.tableName)
+			// Refresh the tables list to show the new table
+			return m, m.loadTablesCmd()
+		}
 		return m, nil
 
 	case tea.WindowSizeMsg:

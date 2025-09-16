@@ -20,6 +20,7 @@ const (
 	modeTableInfo
 	modeIndexes
 	modeViews
+	modeImport
 )
 
 type UIModel struct {
@@ -64,6 +65,10 @@ type UIModel struct {
 	tableInfoData []map[string]interface{}
 	indexesData   []map[string]interface{}
 	viewsData     []map[string]interface{}
+
+	// import wizard
+	importFilePath string
+	importStep     int // 0=file selection, 1=table selection, 2=column mapping, 3=import
 
 	// table component and terminal size
 	tableComp  t.Model

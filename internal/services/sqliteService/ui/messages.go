@@ -36,3 +36,15 @@ type viewsLoadedMsg struct {
 	views []map[string]interface{}
 	err   error
 }
+
+type exportDoneMsg struct {
+	filename string
+	rowCount int
+	err      error
+}
+
+type importDoneMsg struct {
+	tableName string
+	rowCount  int
+	err       error
+}

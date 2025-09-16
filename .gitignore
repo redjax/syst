@@ -12,5 +12,7 @@ syst.*
 *.sqlite
 *.sqlite3
 
+*.csv
+
 !scripts/
 !scripts/build/
