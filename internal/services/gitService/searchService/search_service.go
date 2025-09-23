@@ -20,6 +20,21 @@ import (
 	"github.com/redjax/syst/internal/utils/terminal"
 )
 
+type SearchOptions struct {
+	Query         []string
+	SearchCommits bool
+	SearchFiles   bool
+	SearchContent bool
+	SearchAuthors bool
+	SearchCurrent bool
+	CaseSensitive bool
+	MaxResults    int
+	SinceDate     string
+	UntilDate     string
+	AuthorFilter  string
+	FileFilter    string
+}
+
 type SearchResult struct {
 	Type       string // "commit", "file", "content"
 	ItemTitle  string
@@ -35,7 +50,10 @@ type SearchResult struct {
 
 func (s SearchResult) Title() string       { return s.ItemTitle }
 func (s SearchResult) Description() string { return s.ItemDesc }
-func (s SearchResult) FilterValue() string { return s.ItemTitle + " " + s.ItemDesc + " " + s.Content }
+func (s SearchResult) FilterValue() string {
+	// Return all searchable content in lowercase for case-insensitive filtering
+	return strings.ToLower(s.ItemTitle + " " + s.ItemDesc + " " + s.Content + " " + s.Author + " " + s.FilePath)
+}
 
 type SearchMode int
 
@@ -57,6 +75,7 @@ type model struct {
 	searchProgress string
 	err            error
 	tuiHelper      *terminal.ResponsiveTUIHelper
+	searchOptions  SearchOptions
 }
 
 type searchCompletedMsg struct {
@@ -109,35 +128,38 @@ var (
 			Bold(true)
 )
 
-func initialModel(args []string) model {
+func initialModelWithOptions(opts SearchOptions) model {
 	searchInput := textinput.New()
 	searchInput.Placeholder = "Enter search query (commits, files, content, authors)..."
 	searchInput.CharLimit = 256
 	searchInput.Focus()
 
-	// If args provided, start with that query
-	if len(args) > 0 {
-		query := strings.Join(args, " ")
+	// If query provided, start with that query
+	if len(opts.Query) > 0 {
+		query := strings.Join(opts.Query, " ")
 		searchInput.SetValue(query)
 	}
 
 	resultsList := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	resultsList.Title = "Search Results"
 	resultsList.SetShowStatusBar(false)
-	resultsList.SetShowHelp(false)
+	resultsList.SetFilteringEnabled(true) // Enable built-in filtering
 
 	// Initialize spinner
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-	return model{
-		searchInput: searchInput,
-		resultsList: resultsList,
-		spinner:     s,
-		currentMode: InputMode,
-		tuiHelper:   terminal.NewResponsiveTUIHelper(),
+	m := model{
+		searchInput:   searchInput,
+		resultsList:   resultsList,
+		spinner:       s,
+		currentMode:   InputMode,
+		tuiHelper:     terminal.NewResponsiveTUIHelper(),
+		searchOptions: opts,
 	}
+
+	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -158,12 +180,12 @@ func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func performAdvancedSearch(query string) tea.Msg {
-	// This function performs a comprehensive search across:
-	// 1. Git history (commits, messages, authors)
-	// 2. Historical file names across all commits
-	// 3. File content (both current and historical)
-	// 4. Current filesystem
+func performAdvancedSearch(query string, options SearchOptions) tea.Msg {
+	// This function performs a comprehensive search based on specified options:
+	// - Git history (commits, messages, authors)
+	// - Historical file names across all commits
+	// - File content (both current and historical)
+	// - Current filesystem
 
 	var allResults []SearchResult
 
@@ -172,18 +194,36 @@ func performAdvancedSearch(query string) tea.Msg {
 		return errMsg{err}
 	}
 
-	// Search all types
-	commitResults, _ := searchCommits(repo, query)
-	fileResults, _ := searchHistoricalFiles(repo, query)
-	contentResults, _ := searchHistoricalContent(repo, query)
-	currentResults, _ := searchCurrentFiles(query)
-	authorResults, _ := searchAuthors(repo, query)
+	// Search based on enabled options
+	if options.SearchCommits {
+		if commitResults, err := searchCommits(repo, query); err == nil {
+			allResults = append(allResults, commitResults...)
+		}
+	}
 
-	allResults = append(allResults, commitResults...)
-	allResults = append(allResults, fileResults...)
-	allResults = append(allResults, contentResults...)
-	allResults = append(allResults, currentResults...)
-	allResults = append(allResults, authorResults...)
+	if options.SearchFiles {
+		if fileResults, err := searchHistoricalFiles(repo, query); err == nil {
+			allResults = append(allResults, fileResults...)
+		}
+	}
+
+	if options.SearchContent {
+		if contentResults, err := searchHistoricalContent(repo, query); err == nil {
+			allResults = append(allResults, contentResults...)
+		}
+	}
+
+	if options.SearchCurrent {
+		if currentResults, err := searchCurrentFiles(query); err == nil {
+			allResults = append(allResults, currentResults...)
+		}
+	}
+
+	if options.SearchAuthors {
+		if authorResults, err := searchAuthors(repo, query); err == nil {
+			allResults = append(allResults, authorResults...)
+		}
+	}
 
 	return searchCompletedMsg{results: allResults}
 }
@@ -513,7 +553,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(
 			m.spinner.Tick,
 			func() tea.Msg {
-				return performAdvancedSearch(msg.query)
+				return performAdvancedSearch(msg.query, m.searchOptions)
 			},
 		)
 
@@ -557,7 +597,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, tea.Batch(
 						m.spinner.Tick,
 						func() tea.Msg {
-							return performAdvancedSearch(m.searchQuery)
+							return performAdvancedSearch(m.searchQuery, m.searchOptions)
 						},
 					)
 				}
@@ -568,10 +608,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case ResultsMode:
+			// If we're in filter mode, let the list handle all input except esc
+			if m.resultsList.FilterState() == list.Filtering {
+				switch msg.String() {
+				case "q", "ctrl+c":
+					return m, tea.Quit
+				case "esc":
+					// Exit filter mode but stay in results
+					var cmd tea.Cmd
+					m.resultsList, cmd = m.resultsList.Update(msg)
+					return m, cmd
+				default:
+					// Let the list handle all other input for filtering
+					var cmd tea.Cmd
+					m.resultsList, cmd = m.resultsList.Update(msg)
+					return m, cmd
+				}
+			}
+
+			// Normal results mode (not filtering)
 			switch msg.String() {
 			case "q", "ctrl+c":
 				return m, tea.Quit
 			case "esc":
+				// Go back to input mode
 				m.currentMode = InputMode
 				m.searchInput.Focus()
 				return m, nil
@@ -637,8 +697,16 @@ func (m model) View() string {
 		return m.renderResultDetail(*m.selectedResult)
 
 	default: // ResultsMode
-		help := fmt.Sprintf("Found %d results for '%s' • enter: details • n: new search • esc: back • q: quit",
-			len(m.results), m.searchQuery)
+		// Check if we're in filter mode
+		filterHelp := ""
+		if m.resultsList.FilterState() == list.Filtering {
+			filterHelp = " • filtering: type to filter, esc to exit filter"
+		} else {
+			filterHelp = " • /: filter results"
+		}
+
+		help := fmt.Sprintf("Found %d results for '%s' • enter: details • n: new search • esc: back%s • q: quit",
+			len(m.results), m.searchQuery, filterHelp)
 
 		return fmt.Sprintf(
 			"%s\n%s",
@@ -966,7 +1034,21 @@ func min(a, b int) int {
 }
 
 func RunAdvancedSearch(args []string) error {
-	p := tea.NewProgram(initialModel(args), tea.WithAltScreen())
+	// Default options for backward compatibility
+	opts := SearchOptions{
+		Query:         args,
+		SearchCommits: true,
+		SearchFiles:   true,
+		SearchContent: true,
+		SearchAuthors: true,
+		SearchCurrent: true,
+		MaxResults:    100,
+	}
+	return RunAdvancedSearchWithOptions(opts)
+}
+
+func RunAdvancedSearchWithOptions(opts SearchOptions) error {
+	p := tea.NewProgram(initialModelWithOptions(opts), tea.WithAltScreen())
 	_, err := p.Run()
 	if err != nil {
 		fmt.Printf("Error running search: %v\n", err)
