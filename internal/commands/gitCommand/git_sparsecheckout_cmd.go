@@ -1,13 +1,12 @@
 package gitcommand
 
 import (
-	gitservice "github.com/redjax/syst/internal/services/gitService"
 	sparsecloneservice "github.com/redjax/syst/internal/services/gitService/sparseCloneService"
 	"github.com/spf13/cobra"
 )
 
 func NewGitSparseCloneCommand() *cobra.Command {
-	var opts gitservice.SparseCloneOptions
+	var opts sparsecloneservice.SparseCloneOptions
 
 	cmd := &cobra.Command{
 		Use:   "sparse-clone",
@@ -32,7 +31,7 @@ Otherwise, use the flags to specify the clone options directly.`,
 				if err != nil {
 					return err
 				}
-				return gitservice.SparseClone(*tuiOpts)
+				return sparsecloneservice.SparseClone(*tuiOpts)
 			}
 
 			// Validate that all required flags are provided when using CLI mode
@@ -47,7 +46,7 @@ Otherwise, use the flags to specify the clone options directly.`,
 			}
 
 			// Use the provided flags
-			return gitservice.SparseClone(opts)
+			return sparsecloneservice.SparseClone(opts)
 		},
 	}
 

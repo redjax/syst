@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	gitservice "github.com/redjax/syst/internal/services/gitService"
 )
 
 type viewState int
@@ -40,7 +39,7 @@ type model struct {
 	pathEditMode   bool
 	terminalWidth  int
 	terminalHeight int
-	options        gitservice.SparseCloneOptions
+	options        SparseCloneOptions
 	currentView    viewState
 }
 
@@ -512,7 +511,7 @@ func (m model) prevInput() model {
 }
 
 func (m *model) buildOptions() {
-	m.options = gitservice.SparseCloneOptions{
+	m.options = SparseCloneOptions{
 		Provider:   m.getFieldValue(providerInput, "github"),
 		Protocol:   m.getFieldValue(protocolInput, "ssh"),
 		User:       m.getFieldValue(userInput, ""),
@@ -523,7 +522,7 @@ func (m *model) buildOptions() {
 	}
 }
 
-func (m model) GetOptions() gitservice.SparseCloneOptions {
+func (m model) GetOptions() SparseCloneOptions {
 	return m.options
 }
 
@@ -532,7 +531,7 @@ func (m model) IsSubmitted() bool {
 }
 
 // RunSparseCloneTUI runs the interactive TUI and returns the configured options
-func RunSparseCloneTUI() (*gitservice.SparseCloneOptions, error) {
+func RunSparseCloneTUI() (*SparseCloneOptions, error) {
 	tuiModel := NewSparseCloneTUI()
 
 	p := tea.NewProgram(tuiModel, tea.WithAltScreen())
