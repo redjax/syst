@@ -438,7 +438,8 @@ func searchCurrentFiles(query string) ([]SearchResult, error) {
 		}
 
 		// Skip hidden directories and files, and common ignore patterns
-		if strings.HasPrefix(d.Name(), ".") ||
+		// But don't skip the current directory "."
+		if (strings.HasPrefix(d.Name(), ".") && d.Name() != ".") ||
 			strings.Contains(path, "node_modules") ||
 			strings.Contains(path, "vendor") ||
 			strings.Contains(path, "dist") ||
@@ -588,7 +589,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch m.currentMode {
 		case InputMode:
 			switch msg.String() {
-			case "q", "ctrl+c":
+			case "ctrl+c":
 				return m, tea.Quit
 			case "enter":
 				if m.searchInput.Value() != "" {
