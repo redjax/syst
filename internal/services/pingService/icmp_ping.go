@@ -80,8 +80,9 @@ func runICMPPing(opts *Options) error {
 			opts.Stats.MaxLatency = pkt.Rtt
 		}
 
-		msg := fmt.Sprintf("[OK] %d bytes from %s: icmp_seq=%d time=%v",
-			pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		msg := fmt.Sprintf("[%s] [OK] %d bytes from %s: icmp_seq=%d time=%v",
+			timestamp, pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 
 		results <- pingResult{seq: pkt.Seq, ok: true, msg: msg}
 	}
@@ -126,10 +127,11 @@ func runICMPPing(opts *Options) error {
 					if time.Since(sentAt) > timeout {
 						stopSpinner()
 
+						timestamp := time.Now().Format("2006-01-02 15:04:05")
 						// timeout exceeded: print failure and mark it handled
-						fmt.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
+						fmt.Printf("[%s] [FAIL] No reply from %s (icmp_seq=%d)\n", timestamp, opts.Target, seq)
 						if opts.LogToFile && opts.Logger != nil {
-							opts.Logger.Printf("[FAIL] No reply from %s (icmp_seq=%d)\n", opts.Target, seq)
+							opts.Logger.Printf("[%s] [FAIL] No reply from %s (icmp_seq=%d)\n", timestamp, opts.Target, seq)
 						}
 
 						opts.Stats.Total++
