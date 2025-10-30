@@ -23,7 +23,7 @@ func defaultHTTPPing(opts *Options) error {
 
 	// Prepare & defer spinner
 	stopSpinner := spinner.StartSpinner("")
-	
+
 	// Defer printing the ping summary and stopping spinner on any exit
 	defer func() {
 		stopSpinner()
@@ -52,7 +52,8 @@ func defaultHTTPPing(opts *Options) error {
 			// STOP spinner temporarily before printing result
 			stopSpinner() // stop & clear spinner
 
-			msg = fmt.Sprintf("[FAILURE] Request to %s failed to build: %v (#%d)", url, err, i)
+			timestamp := time.Now().Format("2006-01-02 15:04:05")
+			msg = fmt.Sprintf("[%s] [FAILURE] Request to %s failed to build: %v (#%d)", timestamp, url, err, i)
 
 			fmt.Println(msg)
 
@@ -72,7 +73,8 @@ func defaultHTTPPing(opts *Options) error {
 				// STOP spinner temporarily before printing result
 				stopSpinner() // stop & clear spinner
 
-				msg = fmt.Sprintf("[FAILURE] HTTP HEAD request to %s failed: %v (#%d)", url, err, i)
+				timestamp := time.Now().Format("2006-01-02 15:04:05")
+				msg = fmt.Sprintf("[%s] [FAILURE] HTTP HEAD request to %s failed: %v (#%d)", timestamp, url, err, i)
 				fmt.Println(msg)
 
 				// RESTART spinner
@@ -89,8 +91,9 @@ func defaultHTTPPing(opts *Options) error {
 				// STOP spinner temporarily before printing result
 				stopSpinner() // stop & clear spinner
 
-				msg = fmt.Sprintf("[%s] HTTP HEAD to %s in %s (#%d)",
-					resp.Status, url, latency, i)
+				timestamp := time.Now().Format("2006-01-02 15:04:05")
+				msg = fmt.Sprintf("[%s] [%s] HTTP HEAD to %s in %s (#%d)",
+					timestamp, resp.Status, url, latency, i)
 
 				fmt.Println(msg)
 

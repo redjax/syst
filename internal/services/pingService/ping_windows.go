@@ -50,7 +50,8 @@ func runICMPPing(opts *Options) error {
 
 		if err != nil || !(strings.Contains(outputStr, "Reply from") || strings.Contains(outputStr, "TTL=")) {
 			stopSpinner()
-			msg := fmt.Sprintf("[FAIL] Ping to %s failed: %v (#%d)", opts.Target, err, i)
+			timestamp := time.Now().Format("2006-01-02 15:04:05")
+			msg := fmt.Sprintf("[%s] [FAIL] Ping to %s failed: %v (#%d)", timestamp, opts.Target, err, i)
 			fmt.Println(msg)
 			stopSpinner = spinner.StartSpinner("")
 			if opts.LogToFile && opts.Logger != nil {
@@ -59,7 +60,8 @@ func runICMPPing(opts *Options) error {
 			opts.Stats.Failures++
 		} else {
 			stopSpinner()
-			msg := fmt.Sprintf("[OK] Ping to %s succeeded in %s (#%d)", opts.Target, latency, i)
+			timestamp := time.Now().Format("2006-01-02 15:04:05")
+			msg := fmt.Sprintf("[%s] [OK] Ping to %s succeeded in %s (#%d)", timestamp, opts.Target, latency, i)
 			fmt.Println(msg)
 			stopSpinner = spinner.StartSpinner("")
 			if opts.LogToFile && opts.Logger != nil {
