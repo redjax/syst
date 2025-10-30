@@ -14,5 +14,7 @@ syst.*
 
 *.csv
 
+vulnerability-reports/
+
 !scripts/
 !scripts/build/
