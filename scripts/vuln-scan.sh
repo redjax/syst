@@ -2,15 +2,22 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-cd "$PROJECT_ROOT"
-
 if ! command -v go &>/dev/null; then
     echo "[ERROR] Go is not installed."
     exit 1
 fi
+
+ORIGINAL_PATH="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+function cleanup() {
+    cd "$ORIGINAL_PATH"
+}
+trap cleanup EXIT
+
+## Default values
+REPORTS_DIR="$PROJECT_ROOT/vulnerability-reports"
 
 echo "[ Go Project Vulnerability Scan ]"
 echo " -------------------------------"
@@ -31,8 +38,14 @@ if ! command -v gosec &> /dev/null; then
     echo ""
 fi
 
-## Default inputs
-REPORTS_DIR="$PROJECT_ROOT/vulnerability-reports"
+function usage() {
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -o, --output-dir   Directory where reports will be saved. A timestamped directory will automatically be created, i.e. \$OUTPUT_DIR/YYYY-MM-DD_HH-mm-ss/ (default: ./vulnerability-reports)"
+    echo ""
+}
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -40,6 +53,7 @@ while [[ $# -gt 0 ]]; do
             if [[ -z "$2" ]]; then
                 echo "[ERROR] --output-dir provided but no directory path given" >&2
 
+                usage
                 exit 1
             fi
 
@@ -48,6 +62,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown argument: $1" >&2
+
+            usage
             exit 1
             ;;
     esac
@@ -63,6 +79,8 @@ REPORTS_DIR="$REPORTS_DIR/$(date +%Y-%m-%d-%H-%M-%S)"
 if [[ ! -d "$REPORTS_DIR" ]]; then
     mkdir -p "$REPORTS_DIR"
 fi
+
+cd "$PROJECT_ROOT"
 
 echo ""
 echo "--[ Run govulncheck"
