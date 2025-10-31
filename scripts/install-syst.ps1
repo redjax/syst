@@ -54,9 +54,21 @@ $Version = $Release.tag_name.TrimStart('v')
 Write-Host "Installing syst version $Version"
 
 ## Detect CPU architecture
+$ArchNorm = $null
 try {
     $ArchCode = (Get-CimInstance Win32_Processor | Select-Object -First 1).Architecture
+    
+    # Convert ArchCode to normalized name
+    switch ($ArchCode) {
+        9 { $ArchNorm = 'amd64' }
+        12 { $ArchNorm = 'arm64' }
+        default {
+            Write-Error "Unsupported architecture code: $ArchCode"
+            throw "Unsupported architecture code: $ArchCode"
+        }
+    }
 } catch {
+    # Fallback to environment variable
     $EnvArch = $env:PROCESSOR_ARCHITECTURE
     if ($EnvArch -match '^(AMD64|x86_64)$') {
         $ArchNorm = 'amd64'
@@ -64,18 +76,13 @@ try {
         $ArchNorm = 'arm64'
     } else {
         Write-Error "Unsupported architecture: $EnvArch"
-        throw $_.Exception
+        throw "Unsupported architecture: $EnvArch"
     }
 }
+
 if (-not $ArchNorm) {
-    switch ($ArchCode) {
-        9 { $ArchNorm = 'amd64' }
-        12 { $ArchNorm = 'arm64' }
-        default {
-            Write-Error "Unsupported architecture code: $ArchCode"
-            throw $_.Exception
-        }
-    }
+    Write-Error "Failed to detect system architecture"
+    throw "Failed to detect system architecture"
 }
 
 ## Build asset file name and download URL
