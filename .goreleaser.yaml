@@ -17,8 +17,6 @@ before:
 builds:
   - id: syst
     binary: syst
-    env:
-      - CGO_ENABLED=1
     main: ./cmd/entrypoint/main.go
     goos:
       - linux
@@ -30,6 +28,26 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=1
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+          - CGO_ENABLED=1
+      - goos: darwin
+        goarch: amd64
+        env:
+          - CC=o64-clang
+          - CGO_ENABLED=1
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CC=oa64-clang
+          - CGO_ENABLED=1
     ldflags:
       - -s -w
       - -X 'github.com/redjax/syst/internal/version.Version={{.Version}}'

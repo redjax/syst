@@ -140,19 +140,18 @@ jobs:
         run: |
           if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.version.outputs.version }} already exists"
+            echo "❌ Tag ${{ steps.version.outputs.version }} already exists, aborting"
+            exit 1
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.version.outputs.version }} does not exist, will create"
+            echo "✅ Tag ${{ steps.version.outputs.version }} does not exist, proceeding with release"
           fi
 
-      - name: Create and push tag
-        if: steps.check_tag.outputs.exists == 'false'
+      - name: Set git tag for GoReleaser
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
