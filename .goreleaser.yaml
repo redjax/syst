@@ -61,20 +61,13 @@ builds:
       - -X 'github.com/redjax/syst/internal/version.Date={{.Date}}'
 
 archives:
-  - formats: 
-      - tar.gz
-    ## This name template makes the OS and Arch compatible with the results of `uname` on Linux/Mac.
+  - format: zip
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    ## Use zip for windows archives
-    format_overrides:
-      - goos: windows
-        formats: [zip]
+      {{ .ProjectName }}-
+      {{- if eq .Os "darwin" }}macOS
+      {{- else }}{{ .Os }}{{ end }}-
+      {{- .Arch }}-
+      {{- .Version }}
 
 changelog:
   sort: asc
