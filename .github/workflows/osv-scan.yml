@@ -12,8 +12,62 @@ jobs:
   ## Google Open Source Vulnerability (OSV) scanner
   #  https://osv.dev
   osv-scan:
-    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@main
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install OSV-Scanner
+        run: |
+          curl -L -o osv-scanner https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/
+
+      - name: Run OSV-Scanner (SARIF for GitHub)
+        run: osv-scanner --format=sarif --output=osv-results.sarif ./
+        continue-on-error: true
+
+      - name: Run OSV-Scanner (JSON for download)
+        run: osv-scanner --format=json --output=osv-results.json ./
+        continue-on-error: true
+
+      - name: Run OSV-Scanner (Markdown for readable summary)
+        run: osv-scanner --format=markdown --output=osv-results.md ./
+        continue-on-error: true
+
+      - name: List generated files (debug)
+        if: always()
+        run: |
+          echo "=== Files in current directory ==="
+          ls -lah osv-results.* || echo "No osv-results files found"
+          echo ""
+          echo "=== File contents preview ==="
+          for f in osv-results.*; do
+            if [ -f "$f" ]; then
+              echo "--- $f (first 20 lines) ---"
+              head -20 "$f"
+              echo ""
+            fi
+          done
+
+      - name: Upload SARIF results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: osv-results.sarif
+          category: osv-scan
+          wait-for-processing: true
+
+      - name: Upload OSV-Scanner Results (All Formats)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: osv-scan-results
+          path: |
+            osv-results.sarif
+            osv-results.json
+            osv-results.md
