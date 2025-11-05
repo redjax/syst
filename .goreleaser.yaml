@@ -32,8 +32,24 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
-    # SQLite requires CGO, so we need platform-specific toolchains
-    # For cross-compilation, GoReleaser handles this automatically
+    hooks:
+      pre:
+        - sh -c 'echo "Building for {{ .Os }}/{{ .Arch }}"'
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CC=oa64-clang
+          - CGO_ENABLED=1
+      - goos: darwin
+        goarch: amd64
+        env:
+          - CC=o64-clang
+          - CGO_ENABLED=1
     ldflags:
       - -s -w
       - -X 'github.com/redjax/syst/internal/version.Version={{.Version}}'
