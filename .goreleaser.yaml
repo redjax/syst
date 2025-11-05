@@ -41,7 +41,8 @@ builds:
       - goos: windows
         goarch: amd64
         env:
-          - CGO_ENABLED=0
+          - CC=x86_64-w64-mingw32-gcc
+          - CGO_ENABLED=1
       - goos: darwin
         goarch: amd64
         env:
