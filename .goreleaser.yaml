@@ -9,6 +9,9 @@
 version: 2
 project_name: syst
 
+git:
+  tag_sort: -version:refname
+
 before:
   hooks:
     - go mod tidy
@@ -17,8 +20,6 @@ before:
 builds:
   - id: syst
     binary: syst
-    env:
-      - CGO_ENABLED=1
     main: ./cmd/entrypoint/main.go
     goos:
       - linux
@@ -30,6 +31,29 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=1
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+          - CGO_ENABLED=1
+      - goos: windows
+        goarch: amd64
+        env:
+          - CC=x86_64-w64-mingw32-gcc
+          - CGO_ENABLED=1
+      - goos: darwin
+        goarch: amd64
+        env:
+          - CGO_ENABLED=0
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CGO_ENABLED=0
     ldflags:
       - -s -w
       - -X 'github.com/redjax/syst/internal/version.Version={{.Version}}'

@@ -66,12 +66,23 @@ jobs:
           ## Full history needed for svu
           fetch-depth: 0
 
+      - name: Extract Go version from go.mod
+        id: go-version
+        run: |
+          GO_VERSION=$(grep '^go ' go.mod | awk '{print $2}')
+          echo "version=$GO_VERSION" >> $GITHUB_OUTPUT
+          echo "Detected Go version: $GO_VERSION"
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          ## Check current release version at https://go.dev/doc/devel/release
-          go-version: '1.23.5'
+          go-version: ${{ steps.go-version.outputs.version }}
           cache: false
+
+      - name: Install cross-compilation toolchains
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
 
       - name: Install svu
         run: |
@@ -89,11 +100,11 @@ jobs:
 
           else
             ## Auto-calculate next version based on conventional commits
-            CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
             echo "Current version: $CURRENT"
             
             ## Get commits since last tag
-            if [[ "$CURRENT" == "v0.0.0" ]]; then
+            if [[ "$CURRENT" == "0.0.0" ]]; then
               ## No tags exist yet, check all commits
               COMMITS=$(git log --pretty=format:"%s")
             else
@@ -106,20 +117,20 @@ jobs:
             
             ## Check for feat: commits (minor bump)
             if echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
-              if [[ "$CURRENT" == "v0.0.0" ]]; then
-                VERSION="v0.1.0"
+              if [[ "$CURRENT" == "0.0.0" ]]; then
+                VERSION="0.1.0"
               else
-                VERSION=$(svu minor)
+                VERSION=$(svu minor --strip-prefix)
               fi
               echo "✅ Found 'feat:' commits, bumping minor version to $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
 
             ## Check for fix: commits (patch bump)
             elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:"; then
-              if [[ "$CURRENT" == "v0.0.0" ]]; then
-                VERSION="v0.0.1"
+              if [[ "$CURRENT" == "0.0.0" ]]; then
+                VERSION="0.0.1"
               else
-                VERSION=$(svu patch)
+                VERSION=$(svu patch --strip-prefix)
               fi
               echo "✅ Found 'fix:' commits, bumping patch version to $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -135,14 +146,14 @@ jobs:
         run: |
           if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.version.outputs.version }} already exists"
+            echo "❌ Tag ${{ steps.version.outputs.version }} already exists, aborting"
+            exit 1
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Tag ${{ steps.version.outputs.version }} does not exist, will create"
+            echo "✅ Tag ${{ steps.version.outputs.version }} does not exist, proceeding with release"
           fi
 
-      - name: Create and push tag
-        if: steps.check_tag.outputs.exists == 'false'
+      - name: Set git tag for GoReleaser
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -154,6 +165,6 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          args: release --clean --parallelism 4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
