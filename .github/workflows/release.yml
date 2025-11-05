@@ -100,11 +100,11 @@ jobs:
 
           else
             ## Auto-calculate next version based on conventional commits
-            CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
             echo "Current version: $CURRENT"
             
             ## Get commits since last tag
-            if [[ "$CURRENT" == "v0.0.0" ]]; then
+            if [[ "$CURRENT" == "0.0.0" ]]; then
               ## No tags exist yet, check all commits
               COMMITS=$(git log --pretty=format:"%s")
             else
@@ -117,20 +117,20 @@ jobs:
             
             ## Check for feat: commits (minor bump)
             if echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
-              if [[ "$CURRENT" == "v0.0.0" ]]; then
-                VERSION="v0.1.0"
+              if [[ "$CURRENT" == "0.0.0" ]]; then
+                VERSION="0.1.0"
               else
-                VERSION=$(svu minor)
+                VERSION=$(svu minor --strip-prefix)
               fi
               echo "✅ Found 'feat:' commits, bumping minor version to $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
 
             ## Check for fix: commits (patch bump)
             elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:"; then
-              if [[ "$CURRENT" == "v0.0.0" ]]; then
-                VERSION="v0.0.1"
+              if [[ "$CURRENT" == "0.0.0" ]]; then
+                VERSION="0.0.1"
               else
-                VERSION=$(svu patch)
+                VERSION=$(svu patch --strip-prefix)
               fi
               echo "✅ Found 'fix:' commits, bumping patch version to $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT

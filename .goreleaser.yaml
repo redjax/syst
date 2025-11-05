@@ -9,6 +9,9 @@
 version: 2
 project_name: syst
 
+git:
+  tag_sort: -version:refname
+
 before:
   hooks:
     - go mod tidy
