@@ -41,13 +41,11 @@ builds:
       - goos: darwin
         goarch: amd64
         env:
-          - CC=o64-clang
-          - CGO_ENABLED=1
+          - CGO_ENABLED=0
       - goos: darwin
         goarch: arm64
         env:
-          - CC=oa64-clang
-          - CGO_ENABLED=1
+          - CGO_ENABLED=0
     ldflags:
       - -s -w
       - -X 'github.com/redjax/syst/internal/version.Version={{.Version}}'
