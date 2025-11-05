@@ -38,6 +38,10 @@ builds:
         env:
           - CC=aarch64-linux-gnu-gcc
           - CGO_ENABLED=1
+      - goos: windows
+        goarch: amd64
+        env:
+          - CGO_ENABLED=0
       - goos: darwin
         goarch: amd64
         env:
