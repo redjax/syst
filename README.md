@@ -64,7 +64,7 @@ For Windows, use:
 
 ### From Release
 
-Install a release from the [releases page](https://github.com/redjax/syst/releases/latest). You can check the [Verfied Manual Release pipeline](https://github.com/redjax/syst/actions/workflows/create-verified-release.yml) to see the results of a secret & vulnerability scan done before the release.
+Install a release from the [releases page](https://github.com/redjax/syst/releases/latest). You can check the [Release pipeline](https://github.com/redjax/syst/actions/workflows/release.yml) to see the results of security scans (secrets & vulnerabilities) that run before each release.
 
 ### Build Locally
 
@@ -91,7 +91,7 @@ To enable tab-completion for `syst` commands, run one of the following:
 
 ## Security Scans
 
-Each [release](https://github.com/redjax/syst/actions/workflows/create-verified-release.yml) undergoes a scan for secret leaks & Go vulnerabilities (insecure code, malicious dependencies, etc) before a release is created. If the scans detect a vulnerability, the release is cancelled.
+Each [release](https://github.com/redjax/syst/actions/workflows/release.yml) undergoes comprehensive security scans (secret leaks, dependency vulnerabilities, and Go-specific vulnerability checks) before being published. If critical vulnerabilities are detected, the release is cancelled.
 
 This repository also undergoes nightly scans for secret leaks, vulnerabilities, and codeQL. You can see the results in one of the following places:
 
