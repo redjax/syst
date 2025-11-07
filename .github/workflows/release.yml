@@ -118,7 +118,9 @@ jobs:
 
           else
             ## Auto-calculate next version based on conventional commits
-            CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+            ## Use git tag --sort to find highest version tag globally (not just in current branch)
+            CURRENT=$(git tag --list --sort=-version:refname | head -1 || echo "0.0.0")
+            [[ -z "$CURRENT" ]] && CURRENT="0.0.0"
             echo "Current version: $CURRENT"
             
             ## Get commits since last tag
