@@ -61,20 +61,21 @@ builds:
       - -X 'github.com/redjax/syst/internal/version.Date={{.Date}}'
 
 archives:
-  - formats: 
-      - tar.gz
-    ## This name template makes the OS and Arch compatible with the results of `uname` on Linux/Mac.
+  - id: syst-archives
+    builds:
+      - syst
+    ## Custom naming to match self-upgrade expectations: syst-<os>-<arch>-<version>.zip
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    ## Use zip for windows archives
-    format_overrides:
-      - goos: windows
-        formats: [zip]
+      syst-
+      {{- if eq .Os "darwin" }}macOS
+      {{- else }}{{ .Os }}{{ end }}-
+      {{- .Arch }}-
+      {{- .Version }}
+    ## Use zip for all platforms (self-upgrade expects .zip)
+    format: zip
+    ## Only include the binary (no README/LICENSE to avoid confusion)
+    files:
+      - none*
 
 changelog:
   sort: asc

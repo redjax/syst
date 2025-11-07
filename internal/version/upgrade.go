@@ -190,37 +190,53 @@ func extractBinaryFromZip(zipPath string) (string, error) {
 	}
 	defer r.Close()
 
+	// Look for the binary file specifically (not README, LICENSE, etc.)
+	var binaryFile *zip.File
+	expectedBinaryName := "syst"
+	if runtime.GOOS == "windows" {
+		expectedBinaryName = "syst.exe"
+	}
+
 	for _, f := range r.File {
 		if f.FileInfo().IsDir() {
 			continue
 		}
 
-		rc, err := f.Open()
-		if err != nil {
-			return "", err
+		// Match the binary file by name (case-insensitive)
+		fileName := strings.ToLower(f.Name)
+		if fileName == expectedBinaryName || strings.HasSuffix(fileName, "/"+expectedBinaryName) {
+			binaryFile = f
+			break
 		}
-		defer rc.Close()
-
-		tmpBin, err := os.CreateTemp("", "syst-bin-*")
-		if err != nil {
-			return "", err
-		}
-
-		if _, err := io.Copy(tmpBin, rc); err != nil {
-			tmpBin.Close()
-			return "", err
-		}
-
-		tmpBin.Close()
-
-		if err := os.Chmod(tmpBin.Name(), 0755); err != nil {
-			return "", err
-		}
-
-		return tmpBin.Name(), nil
 	}
 
-	return "", fmt.Errorf("no binary found in zip archive")
+	if binaryFile == nil {
+		return "", fmt.Errorf("binary '%s' not found in zip archive", expectedBinaryName)
+	}
+
+	rc, err := binaryFile.Open()
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	tmpBin, err := os.CreateTemp("", "syst-bin-*")
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := io.Copy(tmpBin, rc); err != nil {
+		tmpBin.Close()
+		return "", err
+	}
+
+	tmpBin.Close()
+
+	if err := os.Chmod(tmpBin.Name(), 0755); err != nil {
+		return "", err
+	}
+
+	return tmpBin.Name(), nil
 }
 
 // copyFile utility
