@@ -89,6 +89,24 @@ jobs:
           echo "Installing svu"
           go install github.com/caarlos0/svu@latest
 
+      - name: Debug git state
+        run: |
+          echo "=== Git Tags ==="
+          git tag -l | sort -V | tail -5
+          echo ""
+          echo "=== Latest tag ==="
+          git describe --tags --abbrev=0
+          echo ""
+          echo "=== Commits since latest tag ==="
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          git log ${LATEST_TAG}..HEAD --oneline
+          echo ""
+          echo "=== What svu thinks ==="
+          echo "Current: $(svu current --strip-prefix)"
+          echo "Next patch: $(svu patch --strip-prefix)"
+          echo "Next minor: $(svu minor --strip-prefix)"
+          echo "Next major: $(svu major --strip-prefix)"
+
       - name: Determine version
         id: version
         run: |
@@ -114,29 +132,35 @@ jobs:
             
             echo "Commits since last tag:"
             echo "$COMMITS"
+            echo ""
+            
+            ## Count commits to ensure we have any
+            COMMIT_COUNT=$(echo "$COMMITS" | grep -v '^$' | wc -l)
+            echo "Number of commits since last tag: $COMMIT_COUNT"
+            
+            if [[ $COMMIT_COUNT -eq 0 ]]; then
+              echo "❌ No commits since last tag. Nothing to release."
+              exit 1
+            fi
             
             ## Check for feat: commits (minor bump)
             if echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
-              if [[ "$CURRENT" == "0.0.0" ]]; then
-                VERSION="0.1.0"
-              else
-                VERSION=$(svu minor --strip-prefix)
-              fi
-              echo "✅ Found 'feat:' commits, bumping minor version to $VERSION"
+              echo "✅ Found 'feat:' commits, bumping minor version"
+              VERSION=$(svu minor --strip-prefix)
+              echo "New version: $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
 
             ## Check for fix: commits (patch bump)
             elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:"; then
-              if [[ "$CURRENT" == "0.0.0" ]]; then
-                VERSION="0.0.1"
-              else
-                VERSION=$(svu patch --strip-prefix)
-              fi
-              echo "✅ Found 'fix:' commits, bumping patch version to $VERSION"
+              echo "✅ Found 'fix:' commits, bumping patch version"
+              VERSION=$(svu patch --strip-prefix)
+              echo "New version: $VERSION"
               echo "version=$VERSION" >> $GITHUB_OUTPUT
 
             else
-              echo "⏭️ No 'feat:' or 'fix:' commits found. This shouldn't happen."
+              echo "⚠️ No 'feat:' or 'fix:' commits found in commit messages."
+              echo "Commits examined:"
+              echo "$COMMITS"
               exit 1
             fi
           fi
