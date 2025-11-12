@@ -92,6 +92,7 @@ func getBranchSyncStatus(branch string) (*BranchSyncStatus, error) {
 
 	// Try to resolve upstream reference
 	upstreamRef := branch + "@{upstream}"
+	// #nosec G204 - branch name comes from git repository, validated by git itself
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", upstreamRef)
 	out, err := cmd.Output()
 	if err != nil {
@@ -106,6 +107,7 @@ func getBranchSyncStatus(branch string) (*BranchSyncStatus, error) {
 	exec.Command("git", "fetch").Run()
 
 	// Compare local and upstream
+	// #nosec G204 - branch and tracking branch names come from git, validated by git
 	cmd = exec.Command("git", "rev-list", "--left-right", "--count", branch+"..."+status.TrackingBranch)
 	out, err = cmd.Output()
 	if err != nil {
