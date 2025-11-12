@@ -250,6 +250,7 @@ func extractBinaryFromZip(zipPath string) (string, error) {
 
 // copyFile utility
 func copyFile(src, dst string) error {
+	// #nosec G304 - CLI tool copies files during self-upgrade by design
 	in, err := os.Open(src)
 
 	if err != nil {
@@ -257,6 +258,7 @@ func copyFile(src, dst string) error {
 	}
 	defer in.Close()
 
+	// #nosec G304 - CLI tool creates files during self-upgrade by design
 	out, err := os.Create(dst)
 	if err != nil {
 		return err

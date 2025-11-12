@@ -138,6 +138,7 @@ func (m UIModel) exportTableToCSVCmd() tea.Cmd {
 		filename := fmt.Sprintf("%s_%s.csv", m.tableName, timestamp)
 
 		// Create file
+		// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 		file, err := os.Create(filename)
 		if err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to create file: %w", err)}
@@ -188,6 +189,7 @@ func (m UIModel) exportSelectedToCSVCmd() tea.Cmd {
 		filename := fmt.Sprintf("%s_selected_%s.csv", m.tableName, timestamp)
 
 		// Create file
+		// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 		file, err := os.Create(filename)
 		if err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to create file: %w", err)}
@@ -237,6 +239,7 @@ func (m UIModel) saveQueryResultsCmd() tea.Cmd {
 		filename := fmt.Sprintf("query_results_%s.csv", timestamp)
 
 		// Create file
+		// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 		file, err := os.Create(filename)
 		if err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to create file: %w", err)}

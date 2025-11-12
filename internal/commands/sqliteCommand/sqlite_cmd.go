@@ -183,9 +183,10 @@ func exportTable(svc *sqliteservice.SQLiteService, tableName, outputDir string) 
 	}
 
 	outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.csv", tableName))
+	// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 	file, err := os.Create(outputFile)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create CSV file: %w", err)
+		return 0, fmt.Errorf("failed to create output file: %w", err)
 	}
 	defer file.Close()
 
@@ -217,6 +218,7 @@ func exportTable(svc *sqliteservice.SQLiteService, tableName, outputDir string) 
 }
 
 func performCSVImport(dbPath, csvPath, tableName string) error {
+	// #nosec G304 - CLI tool opens user-specified CSV files by design
 	file, err := os.Open(csvPath)
 	if err != nil {
 		return fmt.Errorf("failed to open CSV file: %w", err)

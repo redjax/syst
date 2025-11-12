@@ -381,6 +381,7 @@ func exportIgnoredFiles(files []IgnoredFile, outputPath string) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
+	// #nosec G304 - CLI tool creates output files at user-specified paths by design
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
