@@ -149,7 +149,7 @@ func runICMPPing(opts *Options) error {
 
 	// Capture sent pings by periodically reading stats
 	go func() {
-		ticker := time.NewTicker(pinger.Interval)
+		ticker := time.NewTicker(50 * time.Millisecond) // Check more frequently
 		defer ticker.Stop()
 
 		var lastSent int = -1
@@ -164,10 +164,11 @@ func runICMPPing(opts *Options) error {
 
 				for seq := lastSent + 1; seq < stats.PacketsSent; seq++ {
 					sentTime[seq] = time.Now()
-					opts.Stats.Total++
 				}
 
-				lastSent = stats.PacketsSent - 1
+				if stats.PacketsSent > 0 {
+					lastSent = stats.PacketsSent - 1
+				}
 
 				mu.Unlock()
 			}
