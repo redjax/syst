@@ -116,6 +116,7 @@ func defaultHTTPPing(opts *Options) error {
 					opts.Stats.MaxLatency = latency
 				}
 
+				// #nosec G104 - Close error is non-critical, response already processed
 				resp.Body.Close()
 			}
 		}
