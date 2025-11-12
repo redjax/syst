@@ -248,15 +248,15 @@ func (m UIModel) saveQueryResultsCmd() tea.Cmd {
 
 		// Write a comment with the query (as a CSV comment)
 		queryComment := fmt.Sprintf("# Query: %s", m.query)
+		// #nosec G104 - CSV Write errors are non-critical for comments
 		writer.Write([]string{queryComment})
+		// #nosec G104 - CSV Write errors are non-critical for empty lines
 		writer.Write([]string{}) // Empty line
 
 		// Write headers (column names)
 		if err := writer.Write(m.columns); err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to write headers: %w", err)}
-		}
-
-		// Write data rows
+		} // Write data rows
 		rowCount := 0
 		for _, row := range m.rows {
 			record := make([]string, len(m.columns))

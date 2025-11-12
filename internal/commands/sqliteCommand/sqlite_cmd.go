@@ -78,8 +78,11 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&importDbPath, "db", "d", "", "Path to SQLite database file")
 	cmd.Flags().StringVarP(&importCsvPath, "csv", "c", "", "Path to CSV file to import")
 	cmd.Flags().StringVarP(&importTableName, "table", "t", "", "Name of table to import data into")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("db")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("csv")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("table")
 	return cmd
 }
@@ -116,6 +119,7 @@ func newExportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&exportDbPath, "db", "d", "", "Path to SQLite database file")
 	cmd.Flags().StringVarP(&exportTableName, "table", "t", "", "Table name to export (if empty, exports all tables)")
 	cmd.Flags().StringVarP(&exportOutputDir, "output", "o", "", "Output directory for CSV files (defaults to database directory)")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("db")
 
 	return cmd

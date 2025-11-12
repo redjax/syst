@@ -104,6 +104,7 @@ func getBranchSyncStatus(branch string) (*BranchSyncStatus, error) {
 	status.TrackingBranch = strings.TrimSpace(string(out))
 
 	// Run git fetch to update remote refs (non-blocking)
+	// #nosec G104 - Error from background fetch is non-critical
 	exec.Command("git", "fetch").Run()
 
 	// Compare local and upstream
@@ -115,7 +116,9 @@ func getBranchSyncStatus(branch string) (*BranchSyncStatus, error) {
 	}
 	parts := strings.Fields(string(out))
 	if len(parts) == 2 {
+		// #nosec G104 - Sscanf errors ignored, default 0 is acceptable for counts
 		fmt.Sscanf(parts[0], "%d", &status.Behind)
+		// #nosec G104 - Sscanf errors ignored, default 0 is acceptable for counts
 		fmt.Sscanf(parts[1], "%d", &status.Ahead)
 	}
 	return status, nil

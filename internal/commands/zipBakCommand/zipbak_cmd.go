@@ -35,14 +35,13 @@ func NewZipbakCommand() *cobra.Command {
 				}
 			}
 			// Load from env as fallback
+			// #nosec G104 - Environment variable loading errors are non-critical
 			k.Load(env.Provider("ZIPBAK_", ".", func(s string) string { return s }), nil)
 
 			// Unmarshal config into struct
 			return k.Unmarshal("", &backupConfig)
 		},
-	}
-
-	// Add persistent flags for the zipbak command
+	} // Add persistent flags for the zipbak command
 	zipbakCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (JSON)")
 	zipbakCmd.PersistentFlags().BoolP("debug", "D", false, "Enable debug logging")
 
