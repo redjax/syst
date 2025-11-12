@@ -363,6 +363,7 @@ func getEditorCommand(path string) *exec.Cmd {
 	editors := []string{"code", "notepad", "nano", "vi"}
 	for _, editor := range editors {
 		if isCommandAvailable(editor) {
+			// #nosec G204 - editor is from hardcoded whitelist, path is from git repository
 			return exec.Command(editor, path)
 		}
 	}
