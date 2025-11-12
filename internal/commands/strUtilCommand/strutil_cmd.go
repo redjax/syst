@@ -44,6 +44,7 @@ Examples:
 				// Read from file
 				fmt.Printf("Results from file '%s':\n\n", filePath)
 
+				// #nosec G304 - CLI tool reads user-specified files by design
 				content, err := os.ReadFile(filePath)
 				if err != nil {
 					return fmt.Errorf("failed to read file: %w", err)

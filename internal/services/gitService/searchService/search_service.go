@@ -468,11 +468,11 @@ func searchCurrentFiles(query string) ([]SearchResult, error) {
 
 		// Check file content for text files
 		if isTextFile(path) {
+			// #nosec G304 - CLI tool reads files from git repository by design
 			content, err := os.ReadFile(path)
 			if err != nil || len(content) > 1024*1024 { // 1MB limit
 				return nil
 			}
-
 			contentStr := string(content)
 			if strings.Contains(contentStr, "\x00") {
 				return nil // Skip binary files
@@ -932,6 +932,7 @@ func (m model) getFileContent(result SearchResult) string {
 }
 
 func (m model) getCurrentFileContent(filepath string) string {
+	// #nosec G304 - CLI tool reads files from git repository by design
 	content, err := os.ReadFile(filepath)
 	if err != nil {
 		return ""
@@ -988,6 +989,7 @@ func (m model) getCurrentContentWithContext(result SearchResult) string {
 		return ""
 	}
 
+	// #nosec G304 - CLI tool reads files from git repository by design
 	content, err := os.ReadFile(result.FilePath)
 	if err != nil {
 		return ""

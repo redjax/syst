@@ -54,6 +54,7 @@ func makeZip(src, dest string, ignore []string, dryRun bool) error {
 	}
 
 	// Create .zip file
+	// #nosec G304 - CLI tool creates archives at user-specified paths by design
 	zipFile, err := os.Create(zipPath)
 	if err != nil {
 		return err
@@ -87,6 +88,7 @@ func makeZip(src, dest string, ignore []string, dryRun bool) error {
 			return nil
 		}
 
+		// #nosec G304 - CLI tool opens user-specified files for archiving by design
 		file, err := os.Open(path)
 		if err != nil {
 			return err
@@ -122,7 +124,8 @@ func StartBackup(cfg *config.BackupConfig) error {
 		if cfg.DryRun {
 			fmt.Printf("[DRY RUN] Would create output directory '%s'\n", cfg.OutputDir)
 		} else {
-			if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
+			// 0750 = owner rwx, group rx, others none
+			if err := os.MkdirAll(cfg.OutputDir, 0750); err != nil {
 				return fmt.Errorf("failed to create output dir: %v", err)
 			}
 		}

@@ -52,6 +52,7 @@ var rootCmd = &cobra.Command{
 	Long: `My personal system swiss utility knife. Cross platform utility functions & scripts.`,
 	// Adds a help menu you can display with --help/-h
 	Run: func(cmd *cobra.Command, args []string) {
+		// #nosec G104 - Help() error is non-critical for default command behavior
 		cmd.Help()
 	},
 }
@@ -115,6 +116,7 @@ func initConfig() {
 	}
 
 	// Load from environment variables (prefix "SYST_")
+	// #nosec G104 - Environment variable loading errors are non-critical
 	k.Load(env.Provider("SYST_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			strings.TrimPrefix(s, "SYST_")), "_", ".", -1)

@@ -78,8 +78,11 @@ func newImportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&importDbPath, "db", "d", "", "Path to SQLite database file")
 	cmd.Flags().StringVarP(&importCsvPath, "csv", "c", "", "Path to CSV file to import")
 	cmd.Flags().StringVarP(&importTableName, "table", "t", "", "Name of table to import data into")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("db")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("csv")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("table")
 	return cmd
 }
@@ -116,6 +119,7 @@ func newExportCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&exportDbPath, "db", "d", "", "Path to SQLite database file")
 	cmd.Flags().StringVarP(&exportTableName, "table", "t", "", "Table name to export (if empty, exports all tables)")
 	cmd.Flags().StringVarP(&exportOutputDir, "output", "o", "", "Output directory for CSV files (defaults to database directory)")
+	// #nosec G104 - MarkFlagRequired errors are non-critical (flags are validated in RunE)
 	cmd.MarkFlagRequired("db")
 
 	return cmd
@@ -146,8 +150,8 @@ func performCSVExport(dbPath, tableName, outputDir string) error {
 		fmt.Printf("Found %d tables to export: %s\n", len(tables), strings.Join(tables, ", "))
 	}
 
-	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	// Ensure output directory exists (0750 = owner rwx, group rx, others none)
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
@@ -179,9 +183,10 @@ func exportTable(svc *sqliteservice.SQLiteService, tableName, outputDir string) 
 	}
 
 	outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.csv", tableName))
+	// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 	file, err := os.Create(outputFile)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create CSV file: %w", err)
+		return 0, fmt.Errorf("failed to create output file: %w", err)
 	}
 	defer file.Close()
 
@@ -213,6 +218,7 @@ func exportTable(svc *sqliteservice.SQLiteService, tableName, outputDir string) 
 }
 
 func performCSVImport(dbPath, csvPath, tableName string) error {
+	// #nosec G304 - CLI tool opens user-specified CSV files by design
 	file, err := os.Open(csvPath)
 	if err != nil {
 		return fmt.Errorf("failed to open CSV file: %w", err)

@@ -80,9 +80,11 @@ func compareVersion(version1 string, version2 string) int {
 	for i := 0; i < maxlen; i++ {
 		var n1, n2 int
 		if i < len(s1) {
+			// #nosec G104 - Sscanf error ignored, defaults to 0 which is correct for version comparison
 			fmt.Sscanf(s1[i], "%d", &n1)
 		}
 		if i < len(s2) {
+			// #nosec G104 - Sscanf error ignored, defaults to 0 which is correct for version comparison
 			fmt.Sscanf(s2[i], "%d", &n2)
 		}
 		if n1 > n2 {

@@ -203,11 +203,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 						switch item.file.Status {
 						case "modified":
+							// #nosec G204 - file path is from git status, validated by git
 							cmd = exec.Command("git", "diff", item.file.Path)
 						case "staged":
+							// #nosec G204 - file path is from git status, validated by git
 							cmd = exec.Command("git", "diff", "--cached", item.file.Path)
 						default:
 							// For untracked files, show the file content
+							// #nosec G204 - file path is from git status, validated by git
 							cmd = exec.Command("git", "show", fmt.Sprintf("HEAD:%s", item.file.Path))
 						}
 
@@ -437,6 +440,7 @@ func openFileInEditor(filePath string) error {
 			if editor == "$EDITOR" {
 				if envEditor := os.Getenv("EDITOR"); envEditor != "" {
 					if _, err := exec.LookPath(envEditor); err == nil {
+						// #nosec G204 - editor validated by exec.LookPath, file path from git
 						cmd = exec.Command(envEditor, filePath)
 						break
 					}
@@ -444,6 +448,7 @@ func openFileInEditor(filePath string) error {
 				continue
 			}
 			if _, err := exec.LookPath(editor); err == nil {
+				// #nosec G204 - editor from hardcoded whitelist and validated by LookPath
 				cmd = exec.Command(editor, filePath)
 				break
 			}

@@ -99,10 +99,17 @@ func runICMPPing(opts *Options) error {
 
 	fmt.Printf("PING %s (%s):\n", pinger.Addr(), pinger.IPAddr())
 
+	// Channel to capture pinger.Run() errors
+	runErr := make(chan error, 1)
+
 	// Run pinger in goroutine
 	go func() {
-		_ = pinger.Run()
+		err := pinger.Run()
+		if err != nil {
+			runErr <- err
+		}
 		close(results)
+		close(runErr)
 	}()
 
 	// Separate goroutine to track timeouts per ping sequence
@@ -149,7 +156,7 @@ func runICMPPing(opts *Options) error {
 
 	// Capture sent pings by periodically reading stats
 	go func() {
-		ticker := time.NewTicker(pinger.Interval)
+		ticker := time.NewTicker(50 * time.Millisecond) // Check more frequently
 		defer ticker.Stop()
 
 		var lastSent int = -1
@@ -164,10 +171,11 @@ func runICMPPing(opts *Options) error {
 
 				for seq := lastSent + 1; seq < stats.PacketsSent; seq++ {
 					sentTime[seq] = time.Now()
-					opts.Stats.Total++
 				}
 
-				lastSent = stats.PacketsSent - 1
+				if stats.PacketsSent > 0 {
+					lastSent = stats.PacketsSent - 1
+				}
 
 				mu.Unlock()
 			}
@@ -184,6 +192,12 @@ func runICMPPing(opts *Options) error {
 		}
 
 		stopSpinner = spinner.StartSpinner("")
+	}
+
+	// Check if pinger.Run() returned an error
+	if err := <-runErr; err != nil {
+		stopSpinner()
+		return fmt.Errorf("ping failed: %w", err)
 	}
 
 	// After pinger exits, remaining missing failures will have been printed by timeout goroutine.

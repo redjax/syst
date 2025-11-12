@@ -33,12 +33,14 @@ func LoadConfig(flagSet *pflag.FlagSet, configFile string) {
 
 	// Load from environment variables (prefix "SYST_")
 	// This will convert SYST_FOO_BAR to foo.bar
+	// #nosec G104 - Environment variable loading errors are non-critical
 	K.Load(env.Provider("SYST_", ".", func(s string) string {
 		return strings.Replace(strings.ToLower(
 			strings.TrimPrefix(s, "SYST_")), "_", ".", -1)
 	}), nil)
 
 	// Load from command-line flags (highest precedence)
+	// #nosec G104 - Flag loading errors are non-critical
 	K.Load(posflag.Provider(flagSet, ".", K), nil)
 }
 

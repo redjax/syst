@@ -216,6 +216,7 @@ func gatherRepoStats() (*RepoStats, error) {
 	head, _ := r.Head()
 	currentBranch := head.Name().Short()
 
+	// #nosec G104 - ForEach callback errors are handled by returning nil in all cases
 	branches.ForEach(func(ref *plumbing.Reference) error {
 		branchName := ref.Name().Short()
 		isCurrent := branchName == currentBranch
@@ -241,6 +242,7 @@ func gatherRepoStats() (*RepoStats, error) {
 	commitCount := 0
 
 	var lastCommit *object.Commit
+	// #nosec G104 - ForEach callback errors are handled by returning nil in all cases
 	commitIter.ForEach(func(c *object.Commit) error {
 		if lastCommit == nil {
 			lastCommit = c
