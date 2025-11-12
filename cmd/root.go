@@ -16,6 +16,7 @@ import (
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	sqlitecommand "github.com/redjax/syst/internal/commands/sqliteCommand"
+	sshcommand "github.com/redjax/syst/internal/commands/sshKeygenCommand"
 	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
 	weathercommand "github.com/redjax/syst/internal/commands/weatherCommand"
 	_which "github.com/redjax/syst/internal/commands/whichCommand"
@@ -81,6 +82,7 @@ func init() {
 	rootCmd.AddCommand(generatecommand.NewGenerateCommand())
 	rootCmd.AddCommand(encodecommand.NewEncodeCommand())
 	rootCmd.AddCommand(sqlitecommand.NewSqliteCmd())
+	rootCmd.AddCommand(sshcommand.NewSSHCommand())
 
 	// Handle persistent flags like -v/--version and -d/--debug
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
