@@ -145,6 +145,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	if _, err := io.Copy(zipTmp, resp2.Body); err != nil {
 		return fmt.Errorf("failed to write zip file: %w", err)
 	}
+	// #nosec G104 - Close error is non-critical, file is fully written
 	zipTmp.Close()
 
 	binaryTmp, err := extractBinaryFromZip(zipTmp.Name())
@@ -231,10 +232,12 @@ func extractBinaryFromZip(zipPath string) (string, error) {
 	// #nosec G110 - Size limit implemented via io.LimitReader
 	limitedReader := io.LimitReader(rc, 500*1024*1024) // 500MB max
 	if _, err := io.Copy(tmpBin, limitedReader); err != nil {
+		// #nosec G104 - Error from Close is non-critical here, primary error is from Copy
 		tmpBin.Close()
 		return "", err
 	}
 
+	// #nosec G104 - Error from Close checked below via Chmod
 	tmpBin.Close()
 
 	// #nosec G302 - Binary must be executable (0755 is appropriate for executables)
