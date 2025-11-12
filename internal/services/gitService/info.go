@@ -110,7 +110,12 @@ func PrintRepoInfo() error {
 
 	if info.IsRepo {
 		// Repo Size as human readable
-		fmt.Printf("%-18s %s\n", "Repo Size:", BytesToHumanReadable(uint64(info.SizeBytes)))
+		// Ensure size is non-negative before converting
+		var sizeUint uint64
+		if info.SizeBytes >= 0 {
+			sizeUint = uint64(info.SizeBytes)
+		}
+		fmt.Printf("%-18s %s\n", "Repo Size:", BytesToHumanReadable(sizeUint))
 
 		if info.SyncStatus != nil {
 			fmt.Println("Sync Status:")

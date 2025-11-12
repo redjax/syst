@@ -363,6 +363,7 @@ func getEditorCommand(path string) *exec.Cmd {
 	editors := []string{"code", "notepad", "nano", "vi"}
 	for _, editor := range editors {
 		if isCommandAvailable(editor) {
+			// #nosec G204 - editor is from hardcoded whitelist, path is from git repository
 			return exec.Command(editor, path)
 		}
 	}
@@ -375,11 +376,12 @@ func isCommandAvailable(cmd string) bool {
 }
 
 func exportIgnoredFiles(files []IgnoredFile, outputPath string) error {
-	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	// Ensure directory exists (0750 = owner rwx, group rx, others none)
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
+	// #nosec G304 - CLI tool creates output files at user-specified paths by design
 	f, err := os.Create(outputPath)
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)

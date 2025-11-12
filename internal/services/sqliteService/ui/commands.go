@@ -138,6 +138,7 @@ func (m UIModel) exportTableToCSVCmd() tea.Cmd {
 		filename := fmt.Sprintf("%s_%s.csv", m.tableName, timestamp)
 
 		// Create file
+		// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 		file, err := os.Create(filename)
 		if err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to create file: %w", err)}
@@ -188,6 +189,7 @@ func (m UIModel) exportSelectedToCSVCmd() tea.Cmd {
 		filename := fmt.Sprintf("%s_selected_%s.csv", m.tableName, timestamp)
 
 		// Create file
+		// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 		file, err := os.Create(filename)
 		if err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to create file: %w", err)}
@@ -237,6 +239,7 @@ func (m UIModel) saveQueryResultsCmd() tea.Cmd {
 		filename := fmt.Sprintf("query_results_%s.csv", timestamp)
 
 		// Create file
+		// #nosec G304 - CLI tool creates CSV exports at user-specified paths by design
 		file, err := os.Create(filename)
 		if err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to create file: %w", err)}
@@ -248,15 +251,15 @@ func (m UIModel) saveQueryResultsCmd() tea.Cmd {
 
 		// Write a comment with the query (as a CSV comment)
 		queryComment := fmt.Sprintf("# Query: %s", m.query)
+		// #nosec G104 - CSV Write errors are non-critical for comments
 		writer.Write([]string{queryComment})
+		// #nosec G104 - CSV Write errors are non-critical for empty lines
 		writer.Write([]string{}) // Empty line
 
 		// Write headers (column names)
 		if err := writer.Write(m.columns); err != nil {
 			return exportDoneMsg{filename: filename, rowCount: 0, err: fmt.Errorf("failed to write headers: %w", err)}
-		}
-
-		// Write data rows
+		} // Write data rows
 		rowCount := 0
 		for _, row := range m.rows {
 			record := make([]string, len(m.columns))

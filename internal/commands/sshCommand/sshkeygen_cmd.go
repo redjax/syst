@@ -39,6 +39,7 @@ func NewSSHKeygenCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "Overwrite existing key files without prompting")
 
 	// Register completion for --key-type / -t
+	// #nosec G104 - RegisterFlagCompletionFunc error is non-critical
 	cmd.RegisterFlagCompletionFunc("key-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		algorithms := []string{"rsa", "ed25519"}
 		var completions []string

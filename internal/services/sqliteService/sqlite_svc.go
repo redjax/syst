@@ -3,6 +3,7 @@ package sqliteservice
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -10,6 +11,13 @@ import (
 
 type SQLiteService struct {
 	db *sql.DB
+}
+
+// validTableName checks if a table name is safe to use in SQL queries
+// It only allows alphanumeric characters and underscores
+func validTableName(name string) bool {
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9_]+$`, name)
+	return matched
 }
 
 // NewSQLiteService opens the database file
@@ -105,7 +113,13 @@ func (s *SQLiteService) DeleteRow(table string, rowid int64) error {
 		return fmt.Errorf("table name cannot be empty")
 	}
 
+	// Validate table name to prevent SQL injection
+	if !validTableName(table) {
+		return fmt.Errorf("invalid table name: must contain only alphanumeric characters and underscores")
+	}
+
 	// Try rowid first
+	// #nosec G201 - table name is validated above to contain only alphanumeric chars and underscores
 	query := fmt.Sprintf("DELETE FROM %s WHERE rowid = ?", table)
 	res, err := s.db.Exec(query, rowid)
 	if err == nil {
@@ -116,6 +130,7 @@ func (s *SQLiteService) DeleteRow(table string, rowid int64) error {
 	}
 
 	// If rowid failed, try id column
+	// #nosec G201 - table name is validated above to contain only alphanumeric chars and underscores
 	query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", table)
 	res, err = s.db.Exec(query, rowid)
 	if err != nil {
@@ -166,6 +181,6 @@ func (s *SQLiteService) DropTable(table string) error {
 
 // Exec executes a statement without returning rows
 func (s *SQLiteService) Exec(query string, args ...interface{}) error {
-_, err := s.db.Exec(query, args...)
-return err
+	_, err := s.db.Exec(query, args...)
+	return err
 }

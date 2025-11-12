@@ -46,7 +46,9 @@ func RunPing(opts *Options) error {
 	// Setup logging if needed
 	if opts.LogToFile {
 		filePath := createLogFilePath(opts.Target)
-		f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		// Use 0600 permissions for log files (owner read/write only)
+		// #nosec G304 - CLI tool creates log files at user-specified paths by design
+		f, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 		if err != nil {
 			return fmt.Errorf("failed to create log file: %w", err)
 		}

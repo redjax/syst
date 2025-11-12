@@ -12,11 +12,11 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type ViewMode int
@@ -205,7 +205,7 @@ type model struct {
 	// UI state
 	loading    bool
 	err        error
-	tuiHelper *terminal.ResponsiveTUIHelper
+	tuiHelper  *terminal.ResponsiveTUIHelper
 	showSearch bool
 }
 
@@ -298,7 +298,7 @@ func initModel(repo *git.Repository, args []string) model {
 		searchInput:  searchInput,
 		currentPath:  startingPath,
 		loading:      true,
-		tuiHelper: terminal.NewResponsiveTUIHelper(),
+		tuiHelper:    terminal.NewResponsiveTUIHelper(),
 	}
 
 	return m
@@ -742,6 +742,7 @@ func analyzeFileBlame(filePath string) (BlameAnalysis, error) {
 	}
 
 	// Read file content first
+	// #nosec G304 - CLI tool reads user-specified files by design
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		return BlameAnalysis{}, fmt.Errorf("failed to read file %s: %w", filePath, err)

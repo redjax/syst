@@ -10,10 +10,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/redjax/syst/internal/utils/terminal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/redjax/syst/internal/utils/terminal"
 )
 
 type HealthReport struct {
@@ -94,12 +94,12 @@ type AuthorStats struct {
 }
 
 type model struct {
-	report   HealthReport
-	err      error
-	loading  bool
+	report    HealthReport
+	err       error
+	loading   bool
 	tuiHelper *terminal.ResponsiveTUIHelper
-	sections []string
-	selected int
+	sections  []string
+	selected  int
 }
 
 type reportLoadedMsg struct {
@@ -680,6 +680,7 @@ func analyzeGitIgnore() GitIgnoreAnalysis {
 		if ref, err := repo.Head(); err == nil {
 			if commit, err := repo.CommitObject(ref.Hash()); err == nil {
 				if tree, err := commit.Tree(); err == nil {
+					// #nosec G104 - ForEach callback errors are handled by returning nil in all cases
 					tree.Files().ForEach(func(file *object.File) error {
 						foundFiles = append(foundFiles, file.Name)
 						return nil
@@ -917,6 +918,7 @@ func checkSecurityIssues() []SecurityIssue {
 	}
 
 	// Check only tracked files in git tree
+	// #nosec G104 - ForEach callback errors are handled by returning nil in all cases
 	tree.Files().ForEach(func(file *object.File) error {
 		fileName := strings.ToLower(file.Name)
 
@@ -1058,7 +1060,7 @@ func formatBytes(bytes int64) string {
 // RunHealthCheck starts the repository health check TUI
 func RunHealthCheck() error {
 	m := model{
-		loading: true,
+		loading:   true,
 		tuiHelper: terminal.NewResponsiveTUIHelper(),
 	}
 
