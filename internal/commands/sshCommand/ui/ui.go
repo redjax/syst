@@ -29,7 +29,7 @@ func newMainMenuModel() mainMenuModel {
 	l.Title = "Select SSH subcommand"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
-	l.SetShowHelp(false)
+	l.SetShowHelp(true)
 	l.Styles.Title = l.Styles.Title.Bold(true)
 
 	return mainMenuModel{list: l}
@@ -53,6 +53,7 @@ func (m mainMenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
+
 	return m, cmd
 }
 
@@ -77,9 +78,10 @@ type keygenModel struct {
 	cursor         int
 	done           bool
 	message        string
+	returnToMain   bool
 }
 
-func newKeygenModel() keygenModel {
+func newKeygenModel() *keygenModel {
 	alg := textinput.New()
 	alg.Placeholder = "rsa or ed25519"
 	alg.Focus()
@@ -89,7 +91,7 @@ func newKeygenModel() keygenModel {
 	bits := textinput.New()
 	bits.Placeholder = "Bits (RSA only)"
 	bits.CharLimit = 5
-	bits.Width = 10
+	bits.Width = 20
 
 	pass := textinput.New()
 	pass.Placeholder = "Password (optional)"
@@ -105,7 +107,7 @@ func newKeygenModel() keygenModel {
 	output.Placeholder = "~/.ssh/id_rsa or id_ed25519"
 	output.Width = 30
 
-	return keygenModel{
+	return &keygenModel{
 		algorithmInput: alg,
 		bitsInput:      bits,
 		passwordInput:  pass,
@@ -117,43 +119,63 @@ func newKeygenModel() keygenModel {
 
 func (m keygenModel) Init() tea.Cmd { return nil }
 
-func (m keygenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *keygenModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	totalInputs := 5
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 
-		totalInputs := 5
+		switch msg.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		case "esc":
+			// return new main menu model
+			return newMainMenuModel(), nil
+		case "tab", "down":
+			m.cursor = (m.cursor + 1) % totalInputs
+		case "shift+tab", "up":
+			m.cursor = (m.cursor - 1 + totalInputs) % totalInputs
+		case "enter":
+			// Read inputs
+			algo := strings.ToLower(strings.TrimSpace(m.algorithmInput.Value()))
+			output := strings.TrimSpace(m.outputInput.Value())
 
-		// Submit when Enter is pressed on the last input
-		if m.cursor == totalInputs-1 && msg.String() == "enter" {
-			// Gather options
+			// Validate inputs
+			if algo != "rsa" && algo != "ed25519" {
+				m.message = "Error: algorithm must be 'rsa' or 'ed25519'"
+				return m, nil
+			}
+			if output == "" {
+				m.message = "Error: output file path cannot be empty"
+				return m, nil
+			}
+
 			opts := sshservice.KeyGenOptions{
-				Algorithm: strings.ToLower(m.algorithmInput.Value()),
+				Algorithm: algo,
 				Password:  m.passwordInput.Value(),
 				Comment:   m.commentInput.Value(),
-				FilePath:  m.outputInput.Value(),
-			}
-			if opts.Algorithm == "rsa" {
-				fmt.Sscanf(m.bitsInput.Value(), "%d", &opts.Bits)
+				FilePath:  output,
 			}
 
+			if algo == "rsa" {
+				var bits int
+				if n, err := fmt.Sscanf(m.bitsInput.Value(), "%d", &bits); n == 1 && err == nil {
+					opts.Bits = bits
+				} else {
+					opts.Bits = 4096
+				}
+			}
+
+			// Attempt to generate key
 			priv, pub, err := sshservice.GenerateKey(opts)
 			if err != nil {
 				m.message = fmt.Sprintf("Error: %v", err)
-			} else {
-				m.message = fmt.Sprintf("Private key saved to %s\nPublic key saved to %s", priv, pub)
+				return m, nil // keep form active
 			}
-			m.done = true
-			return m, nil
-		}
 
-		// Navigation
-		switch msg.String() {
-		case "esc", "ctrl+c":
-			return m, tea.Quit
-		case "tab", "down", "j":
-			m.cursor = (m.cursor + 1) % totalInputs
-		case "shift+tab", "up", "k":
-			m.cursor = (m.cursor - 1 + totalInputs) % totalInputs
+			m.message = fmt.Sprintf("Private key saved to %s\nPublic key saved to %s", priv, pub)
+			// Form stays active so user can press Esc to go back
+			return m, nil
 		}
 	}
 
@@ -192,33 +214,65 @@ func (m *keygenModel) updateFocus() {
 	}
 }
 
-func (m keygenModel) View() string {
-	if m.done {
-		return m.message + "\nPress any key to exit."
+func (m *keygenModel) View() string {
+	if m.returnToMain {
+		return ""
 	}
-	return fmt.Sprintf(
-		"SSH Keygen\n\nAlgorithm: %s\nBits: %s\nPassword: %s\nComment: %s\nOutput: %s\n\nPress Enter/Tab to navigate, ESC to quit.",
+
+	// Build input fields UI
+	ui := fmt.Sprintf(
+		"SSH Keygen\n\nAlgorithm: %s\nBits: %s\nPassword: %s\nComment: %s\nOutput: %s\n\n",
 		m.algorithmInput.View(),
 		m.bitsInput.View(),
 		m.passwordInput.View(),
 		m.commentInput.View(),
 		m.outputInput.View(),
 	)
+
+	// Message area
+	if m.message != "" {
+		ui += fmt.Sprintf("%s\n\n", m.message)
+	}
+
+	// Navigation hints in dim gray
+	hints := "\033[90mNavigation:\n" +
+		"  Tab / Down  → Next field\n" +
+		"  Shift+Tab / Up  → Previous field\n" +
+		"  Enter → Submit\n" +
+		"  Esc → Back to main menu, Ctrl+C → Quit\033[0m\n"
+
+	return ui + hints
 }
 
 // --- Launch function ---
 func RunSSHUI() {
+	// Start with main menu
+	var currentModel tea.Model = newMainMenuModel()
+
 	p := tea.NewProgram(
-		newMainMenuModel(),
-		tea.WithAltScreen(),       // switch to alternate screen buffer
-		tea.WithMouseCellMotion(), // optional, allows mouse hover
+		currentModel,
+		tea.WithAltScreen(),
 	)
 
-	finalModel, err := p.Run()
-	if err != nil {
-		fmt.Println("Error running SSH UI:", err)
-		os.Exit(1)
-	}
+	for {
+		var err error
+		currentModel, err = p.Run()
+		if err != nil {
+			fmt.Println("Error running SSH UI:", err)
+			os.Exit(1)
+		}
 
-	_ = finalModel
+		switch m := currentModel.(type) {
+		case *keygenModel:
+			if m.returnToMain {
+				// Return to main menu
+				currentModel = newMainMenuModel()
+				p = tea.NewProgram(currentModel, tea.WithAltScreen())
+				continue
+			}
+		}
+
+		// Otherwise exit
+		break
+	}
 }
