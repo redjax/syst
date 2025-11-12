@@ -16,7 +16,7 @@ import (
 	scanPath "github.com/redjax/syst/internal/commands/scanPathCommand"
 	"github.com/redjax/syst/internal/commands/showCommand"
 	sqlitecommand "github.com/redjax/syst/internal/commands/sqliteCommand"
-	sshcommand "github.com/redjax/syst/internal/commands/sshKeygenCommand"
+	sshcommand "github.com/redjax/syst/internal/commands/sshCommand"
 	strutilcommand "github.com/redjax/syst/internal/commands/strUtilCommand"
 	weathercommand "github.com/redjax/syst/internal/commands/weatherCommand"
 	_which "github.com/redjax/syst/internal/commands/whichCommand"
