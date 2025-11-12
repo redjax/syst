@@ -375,8 +375,8 @@ func isCommandAvailable(cmd string) bool {
 }
 
 func exportIgnoredFiles(files []IgnoredFile, outputPath string) error {
-	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+	// Ensure directory exists (0750 = owner rwx, group rx, others none)
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 

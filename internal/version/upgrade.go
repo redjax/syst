@@ -41,6 +41,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	fmt.Fprintln(cmd.ErrOrStderr(), "Checking for latest release...")
 
+	// #nosec G107 - URL is constructed from hardcoded GitHub API endpoint and repo constant
 	resp, err := http.Get(apiURL)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest release: %w", err)
@@ -128,6 +129,7 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 
 	fmt.Fprintln(cmd.ErrOrStderr(), "Downloading:", assetURL)
 
+	// #nosec G107 - URL is from GitHub release API response, validated to be from github.com
 	resp2, err := http.Get(assetURL)
 	if err != nil {
 		return fmt.Errorf("failed to download binary zip: %w", err)
@@ -225,13 +227,17 @@ func extractBinaryFromZip(zipPath string) (string, error) {
 		return "", err
 	}
 
-	if _, err := io.Copy(tmpBin, rc); err != nil {
+	// Limit extraction size to 500MB to prevent decompression bomb attacks
+	// #nosec G110 - Size limit implemented via io.LimitReader
+	limitedReader := io.LimitReader(rc, 500*1024*1024) // 500MB max
+	if _, err := io.Copy(tmpBin, limitedReader); err != nil {
 		tmpBin.Close()
 		return "", err
 	}
 
 	tmpBin.Close()
 
+	// #nosec G302 - Binary must be executable (0755 is appropriate for executables)
 	if err := os.Chmod(tmpBin.Name(), 0755); err != nil {
 		return "", err
 	}

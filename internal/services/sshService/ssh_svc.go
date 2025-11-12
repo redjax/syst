@@ -97,7 +97,8 @@ func GenerateKey(opts KeyGenOptions) (privKeyPath, pubKeyPath string, err error)
 	}
 
 	pubFile := opts.FilePath + ".pub"
-	if err := os.WriteFile(pubFile, []byte(pubKey), 0644); err != nil {
+	// Use 0600 for public key file (can be relaxed to 0644 if needed for sharing)
+	if err := os.WriteFile(pubFile, []byte(pubKey), 0600); err != nil {
 		return "", "", fmt.Errorf("failed to save public key: %w", err)
 	}
 

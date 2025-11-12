@@ -122,7 +122,8 @@ func StartBackup(cfg *config.BackupConfig) error {
 		if cfg.DryRun {
 			fmt.Printf("[DRY RUN] Would create output directory '%s'\n", cfg.OutputDir)
 		} else {
-			if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
+			// 0750 = owner rwx, group rx, others none
+			if err := os.MkdirAll(cfg.OutputDir, 0750); err != nil {
 				return fmt.Errorf("failed to create output dir: %v", err)
 			}
 		}

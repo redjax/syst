@@ -146,8 +146,8 @@ func performCSVExport(dbPath, tableName, outputDir string) error {
 		fmt.Printf("Found %d tables to export: %s\n", len(tables), strings.Join(tables, ", "))
 	}
 
-	// Ensure output directory exists
-	if err := os.MkdirAll(outputDir, 0755); err != nil {
+	// Ensure output directory exists (0750 = owner rwx, group rx, others none)
+	if err := os.MkdirAll(outputDir, 0750); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
