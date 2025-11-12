@@ -67,6 +67,7 @@ func PrintPingSummaryTable(opts *Options) {
 
 	fmt.Fprintf(writer, "Sleep Interval\t%v\n", opts.Sleep)
 	fmt.Fprintf(writer, "Protocol\t%s\n", protocolLabel(opts))
+	// #nosec G104 - Flush error is non-critical for display output
 	writer.Flush()
 
 	if opts.LogToFile && opts.Logger != nil {
