@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	pathutil "github.com/redjax/syst/internal/utils/path"
 )
 
 // Worktree represents a Git worktree
@@ -108,6 +109,13 @@ type AddWorktreeOptions struct {
 
 // AddWorktree creates a new worktree
 func (wm *WorktreeManager) AddWorktree(opts AddWorktreeOptions) error {
+	// Expand the path
+	expandedPath, err := pathutil.ExpandPath(opts.Path)
+	if err != nil {
+		return fmt.Errorf("failed to expand path: %w", err)
+	}
+	opts.Path = expandedPath
+
 	args := []string{"worktree", "add"}
 
 	if opts.Force {
@@ -150,13 +158,19 @@ func (wm *WorktreeManager) AddWorktree(opts AddWorktreeOptions) error {
 
 // RemoveWorktree removes a worktree
 func (wm *WorktreeManager) RemoveWorktree(path string, force bool) error {
+	// Expand the path
+	expandedPath, err := pathutil.ExpandPath(path)
+	if err != nil {
+		return fmt.Errorf("failed to expand path: %w", err)
+	}
+
 	args := []string{"worktree", "remove"}
 
 	if force {
 		args = append(args, "--force")
 	}
 
-	args = append(args, path)
+	args = append(args, expandedPath)
 
 	cmd := exec.Command("git", args...)
 	cmd.Dir = wm.repoPath
