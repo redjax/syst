@@ -239,21 +239,28 @@ func (m model) updateFormInputs(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) createAddForm() []textinput.Model {
-	inputs := make([]textinput.Model, 2)
+	inputs := make([]textinput.Model, 3)
 
-	// Path input
+	// Name input
 	inputs[0] = textinput.New()
-	inputs[0].Placeholder = "Path to new worktree"
-	inputs[0].CharLimit = 256
+	inputs[0].Placeholder = "Worktree directory name"
+	inputs[0].CharLimit = 128
 	inputs[0].Width = 50
-	inputs[0].Prompt = "Path: "
+	inputs[0].Prompt = "Name: "
+
+	// Output directory input
+	inputs[1] = textinput.New()
+	inputs[1].Placeholder = "../ (parent directory)"
+	inputs[1].CharLimit = 256
+	inputs[1].Width = 50
+	inputs[1].Prompt = "Output Dir: "
 
 	// Branch input
-	inputs[1] = textinput.New()
-	inputs[1].Placeholder = "Branch name (optional)"
-	inputs[1].CharLimit = 128
-	inputs[1].Width = 50
-	inputs[1].Prompt = "Branch: "
+	inputs[2] = textinput.New()
+	inputs[2].Placeholder = "Branch name (optional)"
+	inputs[2].CharLimit = 128
+	inputs[2].Width = 50
+	inputs[2].Prompt = "Branch: "
 
 	return inputs
 }
@@ -355,18 +362,14 @@ func (m model) renderConfirmView() string {
 }
 
 func (m model) submitAddForm() tea.Cmd {
-	path := strings.TrimSpace(m.formInputs[0].Value())
-	branch := strings.TrimSpace(m.formInputs[1].Value())
+	name := strings.TrimSpace(m.formInputs[0].Value())
+	outputDir := strings.TrimSpace(m.formInputs[1].Value())
+	branch := strings.TrimSpace(m.formInputs[2].Value())
 
-	if path == "" {
+	if name == "" {
 		return func() tea.Msg {
-			return errMsg{err: fmt.Errorf("path cannot be empty")}
+			return errMsg{err: fmt.Errorf("name cannot be empty")}
 		}
-	}
-
-	// Generate default path if only branch is provided
-	if branch != "" && path == branch {
-		path = m.manager.GenerateWorktreePath(branch)
 	}
 
 	// Auto-detect if we need to create a new branch
@@ -386,7 +389,8 @@ func (m model) submitAddForm() tea.Cmd {
 	}
 
 	opts := AddWorktreeOptions{
-		Path:      path,
+		OutputDir: outputDir,
+		Name:      name,
 		Branch:    branch,
 		NewBranch: createNewBranch,
 		Checkout:  true,
@@ -411,7 +415,13 @@ func addWorktree(manager *WorktreeManager, opts AddWorktreeOptions) tea.Cmd {
 		if err := manager.AddWorktree(opts); err != nil {
 			return errMsg{err: err}
 		}
-		return successMsg{message: fmt.Sprintf("Created worktree at %s", opts.Path)}
+		// Build display path
+		displayOutputDir := opts.OutputDir
+		if displayOutputDir == "" {
+			displayOutputDir = "../"
+		}
+		fullPath := displayOutputDir + opts.Name
+		return successMsg{message: fmt.Sprintf("Created worktree at %s", fullPath)}
 	}
 }
 

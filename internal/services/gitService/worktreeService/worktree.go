@@ -98,7 +98,8 @@ func parseWorktreeList(output string) []Worktree {
 
 // AddWorktreeOptions contains options for adding a worktree
 type AddWorktreeOptions struct {
-	Path       string
+	OutputDir  string // Parent directory for the worktree (default: ../)
+	Name       string // Name of the worktree directory
 	Branch     string
 	NewBranch  bool
 	Force      bool
@@ -109,12 +110,26 @@ type AddWorktreeOptions struct {
 
 // AddWorktree creates a new worktree
 func (wm *WorktreeManager) AddWorktree(opts AddWorktreeOptions) error {
-	// Expand the path
-	expandedPath, err := pathutil.ExpandPath(opts.Path)
+	// Build the full path from output dir and name
+	var fullPath string
+	if opts.OutputDir == "" {
+		opts.OutputDir = "../"
+	}
+
+	// Expand the output directory
+	expandedOutputDir, err := pathutil.ExpandPath(opts.OutputDir)
+	if err != nil {
+		return fmt.Errorf("failed to expand output directory: %w", err)
+	}
+
+	// Build full path
+	fullPath = filepath.Join(expandedOutputDir, opts.Name)
+
+	// Expand the full path in case there are any remaining ~ or relative paths
+	expandedPath, err := pathutil.ExpandPath(fullPath)
 	if err != nil {
 		return fmt.Errorf("failed to expand path: %w", err)
 	}
-	opts.Path = expandedPath
 
 	args := []string{"worktree", "add"}
 
@@ -138,7 +153,7 @@ func (wm *WorktreeManager) AddWorktree(opts AddWorktreeOptions) error {
 		args = append(args, "-b", opts.Branch)
 	}
 
-	args = append(args, opts.Path)
+	args = append(args, expandedPath)
 
 	if !opts.NewBranch && opts.Branch != "" {
 		args = append(args, opts.Branch)

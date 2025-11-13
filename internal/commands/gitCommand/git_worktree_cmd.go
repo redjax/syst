@@ -80,6 +80,8 @@ func NewWorktreeListCommand() *cobra.Command {
 // NewWorktreeAddCommand returns the worktree add command.
 func NewWorktreeAddCommand() *cobra.Command {
 	var (
+		outputDir  string
+		name       string
 		branch     string
 		force      bool
 		detach     bool
@@ -87,10 +89,10 @@ func NewWorktreeAddCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "add <path> [<branch>]",
+		Use:     "add <name> [<branch>]",
 		Aliases: []string{"a", "create", "new"},
 		Short:   "Add a new worktree",
-		Long:    "Create a new Git worktree at the specified path. Branches are automatically created if they don't exist.",
+		Long:    "Create a new Git worktree. Branches are automatically created if they don't exist.",
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repoPath, _ := cmd.Flags().GetString("repo")
@@ -100,17 +102,17 @@ func NewWorktreeAddCommand() *cobra.Command {
 				return err
 			}
 
-			path := args[0]
+			// First arg is the name
+			name = args[0]
 
 			// If branch not specified via flag, check args
 			if branch == "" && len(args) > 1 {
 				branch = args[1]
 			}
 
-			// If path looks like a branch name and no explicit branch, swap them
-			if branch == "" && !strings.Contains(path, "/") && len(args) == 1 {
-				branch = path
-				path = manager.GenerateWorktreePath(branch)
+			// If name looks like a branch name and no explicit branch, use it as branch
+			if branch == "" && !strings.Contains(name, "/") && len(args) == 1 {
+				branch = name
 			}
 
 			// Auto-detect if we need to create a new branch
@@ -128,7 +130,8 @@ func NewWorktreeAddCommand() *cobra.Command {
 			}
 
 			opts := worktreeservice.AddWorktreeOptions{
-				Path:      path,
+				OutputDir: outputDir,
+				Name:      name,
 				Branch:    branch,
 				NewBranch: createNewBranch,
 				Force:     force,
@@ -140,7 +143,14 @@ func NewWorktreeAddCommand() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Created worktree at %s", path)
+			// Construct display path
+			displayOutputDir := outputDir
+			if displayOutputDir == "" {
+				displayOutputDir = "../"
+			}
+			fullPath := displayOutputDir + name
+
+			fmt.Printf("Created worktree at %s", fullPath)
 			if branch != "" {
 				fmt.Printf(" on branch %s", branch)
 			}
@@ -150,6 +160,7 @@ func NewWorktreeAddCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&outputDir, "output-dir", "o", "", "Parent directory for the worktree (default: ../)")
 	cmd.Flags().StringVarP(&branch, "branch", "b", "", "Branch to checkout or create (auto-created if doesn't exist)")
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Force creation even if worktree path exists")
 	cmd.Flags().BoolVar(&detach, "detach", false, "Detach HEAD in the new worktree")
