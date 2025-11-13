@@ -28,6 +28,7 @@ func NewGitCommand() *cobra.Command {
 	cmd.AddCommand(NewGitIgnoredCommand())
 	cmd.AddCommand(NewGitSearchCommand())
 	cmd.AddCommand(NewGitStatusCommand())
+	cmd.AddCommand(NewGitWorktreeCommand())
 
 	return cmd
 }

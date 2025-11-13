@@ -1,0 +1,244 @@
+package worktreeservice
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+
+	"github.com/go-git/go-git/v5"
+)
+
+// Worktree represents a Git worktree
+type Worktree struct {
+	Path   string
+	Branch string
+	Commit string
+	IsBare bool
+}
+
+// WorktreeManager handles Git worktree operations
+type WorktreeManager struct {
+	repo     *git.Repository
+	repoPath string
+}
+
+// NewWorktreeManager creates a new worktree manager
+func NewWorktreeManager(repoPath string) (*WorktreeManager, error) {
+	if repoPath == "" {
+		var err error
+		repoPath, err = os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get working directory: %w", err)
+		}
+	}
+
+	repo, err := git.PlainOpen(repoPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open repository: %w", err)
+	}
+
+	return &WorktreeManager{
+		repo:     repo,
+		repoPath: repoPath,
+	}, nil
+}
+
+// ListWorktrees returns a list of all worktrees
+func (wm *WorktreeManager) ListWorktrees() ([]Worktree, error) {
+	cmd := exec.Command("git", "worktree", "list", "--porcelain")
+	cmd.Dir = wm.repoPath
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list worktrees: %w", err)
+	}
+
+	return parseWorktreeList(string(output)), nil
+}
+
+// parseWorktreeList parses the output of git worktree list --porcelain
+func parseWorktreeList(output string) []Worktree {
+	var worktrees []Worktree
+	var current *Worktree
+
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		if line == "" {
+			if current != nil {
+				worktrees = append(worktrees, *current)
+				current = nil
+			}
+			continue
+		}
+
+		if strings.HasPrefix(line, "worktree ") {
+			current = &Worktree{
+				Path: strings.TrimPrefix(line, "worktree "),
+			}
+		} else if strings.HasPrefix(line, "HEAD ") && current != nil {
+			current.Commit = strings.TrimPrefix(line, "HEAD ")
+		} else if strings.HasPrefix(line, "branch ") && current != nil {
+			current.Branch = strings.TrimPrefix(line, "branch ")
+		} else if line == "bare" && current != nil {
+			current.IsBare = true
+		}
+	}
+
+	// Add the last worktree if exists
+	if current != nil {
+		worktrees = append(worktrees, *current)
+	}
+
+	return worktrees
+}
+
+// AddWorktreeOptions contains options for adding a worktree
+type AddWorktreeOptions struct {
+	Path       string
+	Branch     string
+	NewBranch  bool
+	Force      bool
+	Detach     bool
+	Checkout   bool
+	LockReason string
+}
+
+// AddWorktree creates a new worktree
+func (wm *WorktreeManager) AddWorktree(opts AddWorktreeOptions) error {
+	args := []string{"worktree", "add"}
+
+	if opts.Force {
+		args = append(args, "--force")
+	}
+
+	if opts.Detach {
+		args = append(args, "--detach")
+	}
+
+	if !opts.Checkout {
+		args = append(args, "--no-checkout")
+	}
+
+	if opts.LockReason != "" {
+		args = append(args, "--lock", "--reason", opts.LockReason)
+	}
+
+	if opts.NewBranch && opts.Branch != "" {
+		args = append(args, "-b", opts.Branch)
+	}
+
+	args = append(args, opts.Path)
+
+	if !opts.NewBranch && opts.Branch != "" {
+		args = append(args, opts.Branch)
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = wm.repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to add worktree: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveWorktree removes a worktree
+func (wm *WorktreeManager) RemoveWorktree(path string, force bool) error {
+	args := []string{"worktree", "remove"}
+
+	if force {
+		args = append(args, "--force")
+	}
+
+	args = append(args, path)
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = wm.repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to remove worktree: %w", err)
+	}
+
+	return nil
+}
+
+// PruneWorktrees removes worktree information for deleted working trees
+func (wm *WorktreeManager) PruneWorktrees(dryRun bool) error {
+	args := []string{"worktree", "prune"}
+
+	if dryRun {
+		args = append(args, "--dry-run")
+	}
+
+	cmd := exec.Command("git", args...)
+	cmd.Dir = wm.repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to prune worktrees: %w", err)
+	}
+
+	return nil
+}
+
+// GetRepoName returns the repository name from the path
+func (wm *WorktreeManager) GetRepoName() string {
+	return filepath.Base(wm.repoPath)
+}
+
+// GenerateWorktreePath generates a default worktree path
+func (wm *WorktreeManager) GenerateWorktreePath(branchName string) string {
+	repoName := wm.GetRepoName()
+	parentDir := filepath.Dir(wm.repoPath)
+	return filepath.Join(parentDir, fmt.Sprintf("%s-%s", repoName, branchName))
+}
+
+// OpenInEditor opens a worktree in the system's default editor
+func OpenInEditor(path string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS - try common editors
+		if _, err := exec.LookPath("code"); err == nil {
+			cmd = exec.Command("code", path)
+		} else if _, err := exec.LookPath("subl"); err == nil {
+			cmd = exec.Command("subl", path)
+		} else {
+			cmd = exec.Command("open", path)
+		}
+	case "windows":
+		// Windows - try VSCode or default
+		if _, err := exec.LookPath("code"); err == nil {
+			cmd = exec.Command("code", path)
+		} else {
+			cmd = exec.Command("cmd", "/c", "start", path)
+		}
+	default:
+		// Linux/Unix - try common editors
+		if _, err := exec.LookPath("code"); err == nil {
+			cmd = exec.Command("code", path)
+		} else if editor := os.Getenv("EDITOR"); editor != "" {
+			cmd = exec.Command(editor, path)
+		} else if _, err := exec.LookPath("xdg-open"); err == nil {
+			cmd = exec.Command("xdg-open", path)
+		} else {
+			return fmt.Errorf("no suitable editor found")
+		}
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to open editor: %w", err)
+	}
+
+	return nil
+}
