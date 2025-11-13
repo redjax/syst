@@ -107,20 +107,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case successMsg:
 		m.message = msg.message
 		m.currentView = listView
-		return m, loadWorktrees(m.manager)
+		m.err = nil
+		// Only reload worktrees if the message doesn't say "Opened"
+		if !strings.Contains(msg.message, "Opened") {
+			return m, loadWorktrees(m.manager)
+		}
+		return m, nil
 
 	case errMsg:
 		m.err = msg.err
+		m.message = ""
 		m.currentView = listView
 		return m, nil
 
 	case tea.KeyMsg:
+		// If we're in form view, handle form input updates first
+		if m.currentView == formView {
+			// Let text inputs handle the message first
+			m2, cmd := m.updateFormInputs(msg)
+			m = m2.(model)
+			// Then handle form navigation keys
+			m3, cmd2 := m.handleFormViewKeys(msg)
+			return m3, tea.Batch(cmd, cmd2)
+		}
 		return m.handleKeyPress(msg)
-	}
-
-	// Handle form input updates
-	if m.currentView == formView {
-		return m.updateFormInputs(msg)
 	}
 
 	return m, nil
@@ -334,7 +344,8 @@ func (m model) renderFormView() string {
 	if m.createNewBranch {
 		checkBox = "[x]"
 	}
-	s.WriteString(fmt.Sprintf("%s Create new branch (Ctrl+N to toggle)\n\n", checkBox))
+	s.WriteString(fmt.Sprintf("%s Force new branch creation (Ctrl+N to toggle)\n", checkBox))
+	s.WriteString(helpStyle.Render("   (branches are auto-created if they don't exist)\n\n"))
 
 	s.WriteString(helpStyle.Render("(Tab) next field  (Enter) create  (Esc) cancel"))
 
@@ -368,10 +379,26 @@ func (m model) submitAddForm() tea.Cmd {
 		path = m.manager.GenerateWorktreePath(branch)
 	}
 
+	// Auto-detect if we need to create a new branch
+	createNewBranch := m.createNewBranch
+	if branch != "" && !createNewBranch {
+		// Check if branch exists
+		exists, err := m.manager.BranchExists(branch)
+		if err != nil {
+			return func() tea.Msg {
+				return errMsg{err: fmt.Errorf("failed to check branch: %w", err)}
+			}
+		}
+		// If branch doesn't exist, automatically create it
+		if !exists {
+			createNewBranch = true
+		}
+	}
+
 	opts := AddWorktreeOptions{
 		Path:      path,
 		Branch:    branch,
-		NewBranch: m.createNewBranch,
+		NewBranch: createNewBranch,
 		Checkout:  true,
 	}
 

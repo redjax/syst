@@ -15,8 +15,10 @@ func NewGitWorktreeCommand() *cobra.Command {
 		Aliases: []string{"wt"},
 		Short:   "Manage Git worktrees",
 		Long:    "Manage Git worktrees with both CLI and TUI interfaces. Run without subcommands to open the interactive TUI.",
+		Args:    cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// If no subcommand provided, run the TUI
+			// If no args provided, run the TUI
+			// (subcommands will handle themselves)
 			repoPath, _ := cmd.Flags().GetString("repo")
 			return worktreeservice.RunWorktreeTUI(repoPath)
 		},
