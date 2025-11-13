@@ -20,18 +20,17 @@ const (
 )
 
 type model struct {
-	worktrees       []Worktree
-	manager         *WorktreeManager
-	cursor          int
-	err             error
-	currentView     viewMode
-	formInputs      []textinput.Model
-	focusedInput    int
-	confirmAction   string
-	confirmTarget   string
-	tuiHelper       *terminal.ResponsiveTUIHelper
-	message         string
-	createNewBranch bool
+	worktrees     []Worktree
+	manager       *WorktreeManager
+	cursor        int
+	err           error
+	currentView   viewMode
+	formInputs    []textinput.Model
+	focusedInput  int
+	confirmAction string
+	confirmTarget string
+	tuiHelper     *terminal.ResponsiveTUIHelper
+	message       string
 }
 
 type worktreesLoadedMsg struct {
@@ -211,9 +210,6 @@ func (m model) handleFormViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "enter":
 		return m, m.submitAddForm()
-	case "ctrl+n":
-		m.createNewBranch = !m.createNewBranch
-		return m, nil
 	}
 	return m, nil
 }
@@ -339,13 +335,7 @@ func (m model) renderFormView() string {
 	}
 
 	s.WriteString("\n\n")
-
-	checkBox := "[ ]"
-	if m.createNewBranch {
-		checkBox = "[x]"
-	}
-	s.WriteString(fmt.Sprintf("%s Force new branch creation (Ctrl+N to toggle)\n", checkBox))
-	s.WriteString(helpStyle.Render("   (branches are auto-created if they don't exist)\n\n"))
+	s.WriteString(helpStyle.Render("Branches are auto-created if they don't exist\n\n"))
 
 	s.WriteString(helpStyle.Render("(Tab) next field  (Enter) create  (Esc) cancel"))
 
@@ -380,8 +370,8 @@ func (m model) submitAddForm() tea.Cmd {
 	}
 
 	// Auto-detect if we need to create a new branch
-	createNewBranch := m.createNewBranch
-	if branch != "" && !createNewBranch {
+	createNewBranch := false
+	if branch != "" {
 		// Check if branch exists
 		exists, err := m.manager.BranchExists(branch)
 		if err != nil {

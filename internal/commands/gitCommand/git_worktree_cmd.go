@@ -81,7 +81,6 @@ func NewWorktreeListCommand() *cobra.Command {
 func NewWorktreeAddCommand() *cobra.Command {
 	var (
 		branch     string
-		newBranch  bool
 		force      bool
 		detach     bool
 		noCheckout bool
@@ -91,7 +90,7 @@ func NewWorktreeAddCommand() *cobra.Command {
 		Use:     "add <path> [<branch>]",
 		Aliases: []string{"a", "create", "new"},
 		Short:   "Add a new worktree",
-		Long:    "Create a new Git worktree at the specified path",
+		Long:    "Create a new Git worktree at the specified path. Branches are automatically created if they don't exist.",
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repoPath, _ := cmd.Flags().GetString("repo")
@@ -114,10 +113,24 @@ func NewWorktreeAddCommand() *cobra.Command {
 				path = manager.GenerateWorktreePath(branch)
 			}
 
+			// Auto-detect if we need to create a new branch
+			createNewBranch := false
+			if branch != "" {
+				// Check if branch exists
+				exists, err := manager.BranchExists(branch)
+				if err != nil {
+					return fmt.Errorf("failed to check branch: %w", err)
+				}
+				// If branch doesn't exist, automatically create it
+				if !exists {
+					createNewBranch = true
+				}
+			}
+
 			opts := worktreeservice.AddWorktreeOptions{
 				Path:      path,
 				Branch:    branch,
-				NewBranch: newBranch,
+				NewBranch: createNewBranch,
 				Force:     force,
 				Detach:    detach,
 				Checkout:  !noCheckout,
@@ -137,8 +150,7 @@ func NewWorktreeAddCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&branch, "branch", "b", "", "Branch to checkout or create")
-	cmd.Flags().BoolVarP(&newBranch, "new-branch", "B", false, "Create a new branch")
+	cmd.Flags().StringVarP(&branch, "branch", "b", "", "Branch to checkout or create (auto-created if doesn't exist)")
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Force creation even if worktree path exists")
 	cmd.Flags().BoolVar(&detach, "detach", false, "Detach HEAD in the new worktree")
 	cmd.Flags().BoolVar(&noCheckout, "no-checkout", false, "Don't checkout files in the new worktree")
