@@ -219,6 +219,62 @@ func (wm *WorktreeManager) PruneWorktrees(dryRun bool) error {
 	return nil
 }
 
+// MoveWorktree moves a worktree to a new location, optionally renaming it
+func (wm *WorktreeManager) MoveWorktree(worktreePath, destDir, newName string) error {
+	// Expand the worktree path
+	expandedWorktreePath, err := pathutil.ExpandPath(worktreePath)
+	if err != nil {
+		return fmt.Errorf("failed to expand worktree path: %w", err)
+	}
+
+	// Expand the destination directory
+	expandedDestDir, err := pathutil.ExpandPath(destDir)
+	if err != nil {
+		return fmt.Errorf("failed to expand destination directory: %w", err)
+	}
+
+	// Validate source worktree exists
+	if _, err := os.Stat(expandedWorktreePath); os.IsNotExist(err) {
+		return fmt.Errorf("worktree does not exist: %s", expandedWorktreePath)
+	}
+
+	// Create destination directory if it doesn't exist
+	if _, err := os.Stat(expandedDestDir); os.IsNotExist(err) {
+		// #nosec G301 -- CLI tool creating user-specified directories with standard permissions
+		if err := os.MkdirAll(expandedDestDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create destination directory: %w", err)
+		}
+	}
+
+	// Determine target path
+	var targetPath string
+	if newName != "" {
+		targetPath = filepath.Join(expandedDestDir, newName)
+	} else {
+		// Use same directory name as source
+		sourceName := filepath.Base(expandedWorktreePath)
+		targetPath = filepath.Join(expandedDestDir, sourceName)
+	}
+
+	// Check if target already exists
+	if _, err := os.Stat(targetPath); err == nil {
+		return fmt.Errorf("target path already exists: %s", targetPath)
+	}
+
+	// Execute git worktree move
+	args := []string{"worktree", "move", expandedWorktreePath, targetPath}
+	cmd := exec.Command("git", args...)
+	cmd.Dir = wm.repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to move worktree: %w", err)
+	}
+
+	return nil
+}
+
 // BranchExists checks if a branch exists in the repository
 func (wm *WorktreeManager) BranchExists(branchName string) (bool, error) {
 	// Use git command to check if branch exists

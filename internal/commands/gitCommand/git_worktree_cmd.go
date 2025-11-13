@@ -2,6 +2,7 @@ package gitcommand
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	worktreeservice "github.com/redjax/syst/internal/services/gitService/worktreeService"
@@ -31,6 +32,7 @@ func NewGitWorktreeCommand() *cobra.Command {
 	cmd.AddCommand(NewWorktreeListCommand())
 	cmd.AddCommand(NewWorktreeAddCommand())
 	cmd.AddCommand(NewWorktreeRemoveCommand())
+	cmd.AddCommand(NewWorktreeMoveCommand())
 	cmd.AddCommand(NewWorktreePruneCommand())
 
 	return cmd
@@ -211,6 +213,71 @@ func NewWorktreeRemoveCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Force removal even if worktree is dirty")
+
+	return cmd
+}
+
+// NewWorktreeMoveCommand returns the worktree move command.
+func NewWorktreeMoveCommand() *cobra.Command {
+	var (
+		destDir string
+		newName string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "move <worktree-path>",
+		Aliases: []string{"mv"},
+		Short:   "Move a worktree to a new location",
+		Long: `Move an existing worktree to a new directory, optionally renaming it.
+
+The worktree will be moved to the destination directory with the same name
+unless --name is specified to rename it during the move.
+
+Examples:
+  # Move worktree to new location (keeps same name)
+  syst git worktree move ~/git/worktrees/syst-feat-x --dest ~/git/.worktrees
+
+  # Move and rename worktree
+  syst git worktree move ~/git/worktrees/old-name --dest ~/git/.worktrees --name new-name`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repoPath, _ := cmd.Flags().GetString("repo")
+			worktreePath := args[0]
+
+			// Validate required flags
+			if destDir == "" {
+				return fmt.Errorf("destination directory is required (--dest or -d)")
+			}
+
+			manager, err := worktreeservice.NewWorktreeManager(repoPath)
+			if err != nil {
+				return err
+			}
+
+			// Execute move
+			if err := manager.MoveWorktree(worktreePath, destDir, newName); err != nil {
+				return fmt.Errorf("failed to move worktree: %w", err)
+			}
+
+			// Display success message
+			targetName := newName
+			if targetName == "" {
+				targetName = filepath.Base(worktreePath)
+			}
+			finalPath := filepath.Join(destDir, targetName)
+
+			fmt.Printf("✅ Worktree moved successfully:\n")
+			fmt.Printf("   From: %s\n", worktreePath)
+			fmt.Printf("   To:   %s\n", finalPath)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&destDir, "dest", "d", "", "Destination directory (required)")
+	cmd.Flags().StringVarP(&newName, "name", "n", "", "New name for worktree (optional, keeps original name if not specified)")
+	// #nosec G104 - MarkFlagRequired error ignored, flag existence guaranteed by Cobra
+	_ = cmd.MarkFlagRequired("dest")
 
 	return cmd
 }

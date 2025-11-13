@@ -27,6 +27,7 @@ type model struct {
 	currentView   viewMode
 	formInputs    []textinput.Model
 	focusedInput  int
+	formType      string // "add" or "move"
 	confirmAction string
 	confirmTarget string
 	tuiHelper     *terminal.ResponsiveTUIHelper
@@ -161,10 +162,21 @@ func (m model) handleListViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case key.Matches(msg, key.NewBinding(key.WithKeys("n"))):
 		m.currentView = formView
+		m.formType = "add"
 		m.formInputs = m.createAddForm()
 		m.focusedInput = 0
 		if len(m.formInputs) > 0 {
 			m.formInputs[0].Focus()
+		}
+	case key.Matches(msg, key.NewBinding(key.WithKeys("m"))):
+		if len(m.worktrees) > 0 && m.cursor < len(m.worktrees) {
+			m.currentView = formView
+			m.formType = "move"
+			m.formInputs = m.createMoveForm()
+			m.focusedInput = 0
+			if len(m.formInputs) > 0 {
+				m.formInputs[0].Focus()
+			}
 		}
 	case key.Matches(msg, key.NewBinding(key.WithKeys("d"))):
 		if len(m.worktrees) > 0 && m.cursor < len(m.worktrees) {
@@ -209,6 +221,9 @@ func (m model) handleFormViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "enter":
+		if m.formType == "move" {
+			return m, m.submitMoveForm()
+		}
 		return m, m.submitAddForm()
 	}
 	return m, nil
@@ -261,6 +276,26 @@ func (m model) createAddForm() []textinput.Model {
 	inputs[2].CharLimit = 128
 	inputs[2].Width = 50
 	inputs[2].Prompt = "Branch: "
+
+	return inputs
+}
+
+func (m model) createMoveForm() []textinput.Model {
+	inputs := make([]textinput.Model, 2)
+
+	// Destination directory input
+	inputs[0] = textinput.New()
+	inputs[0].Placeholder = "Destination directory"
+	inputs[0].CharLimit = 256
+	inputs[0].Width = 50
+	inputs[0].Prompt = "Dest Dir: "
+
+	// New name input (optional)
+	inputs[1] = textinput.New()
+	inputs[1].Placeholder = "Leave empty to keep current name"
+	inputs[1].CharLimit = 128
+	inputs[1].Width = 50
+	inputs[1].Prompt = "New Name: "
 
 	return inputs
 }
@@ -321,7 +356,7 @@ func (m model) renderListView() string {
 
 	// Help
 	s.WriteString("\n")
-	s.WriteString(helpStyle.Render("(n) new worktree  (d) delete  (o) open  (r) refresh  (q) quit"))
+	s.WriteString(helpStyle.Render("(n) new worktree  (m) move  (d) delete  (o) open  (r) refresh  (q) quit"))
 	s.WriteString("\n")
 	s.WriteString(helpStyle.Render("(↑/k) up  (↓/j) down"))
 
@@ -331,8 +366,18 @@ func (m model) renderListView() string {
 func (m model) renderFormView() string {
 	var s strings.Builder
 
-	title := titleStyle.Render("New Worktree")
-	s.WriteString(title + "\n\n")
+	// Set title based on form type
+	title := "New Worktree"
+	actionText := "create"
+	helpText := "Branches are auto-created if they don't exist\n\n"
+
+	if m.formType == "move" {
+		title = "Move Worktree"
+		actionText = "move"
+		helpText = "Leave name empty to keep current directory name\n\n"
+	}
+
+	s.WriteString(titleStyle.Render(title) + "\n\n")
 
 	for i, input := range m.formInputs {
 		s.WriteString(input.View() + "\n")
@@ -342,9 +387,8 @@ func (m model) renderFormView() string {
 	}
 
 	s.WriteString("\n\n")
-	s.WriteString(helpStyle.Render("Branches are auto-created if they don't exist\n\n"))
-
-	s.WriteString(helpStyle.Render("(Tab) next field  (Enter) create  (Esc) cancel"))
+	s.WriteString(helpStyle.Render(helpText))
+	s.WriteString(helpStyle.Render(fmt.Sprintf("(Tab) next field  (Enter) %s  (Esc) cancel", actionText)))
 
 	return formStyle.Render(s.String())
 }
@@ -399,6 +443,22 @@ func (m model) submitAddForm() tea.Cmd {
 	return addWorktree(m.manager, opts)
 }
 
+func (m model) submitMoveForm() tea.Cmd {
+	destDir := strings.TrimSpace(m.formInputs[0].Value())
+	newName := strings.TrimSpace(m.formInputs[1].Value())
+
+	if destDir == "" {
+		return func() tea.Msg {
+			return errMsg{err: fmt.Errorf("destination directory cannot be empty")}
+		}
+	}
+
+	// Get the current worktree path
+	currentPath := m.worktrees[m.cursor].Path
+
+	return moveWorktree(m.manager, currentPath, destDir, newName)
+}
+
 // Commands
 func loadWorktrees(manager *WorktreeManager) tea.Cmd {
 	return func() tea.Msg {
@@ -431,6 +491,23 @@ func deleteWorktree(manager *WorktreeManager, path string) tea.Cmd {
 			return errMsg{err: err}
 		}
 		return successMsg{message: fmt.Sprintf("Deleted worktree %s", path)}
+	}
+}
+
+func moveWorktree(manager *WorktreeManager, worktreePath, destDir, newName string) tea.Cmd {
+	return func() tea.Msg {
+		if err := manager.MoveWorktree(worktreePath, destDir, newName); err != nil {
+			return errMsg{err: err}
+		}
+		// Build the target path for display
+		targetName := newName
+		if targetName == "" {
+			// Extract the directory name from the source path
+			parts := strings.Split(strings.TrimSuffix(worktreePath, "/"), "/")
+			targetName = parts[len(parts)-1]
+		}
+		targetPath := destDir + "/" + targetName
+		return successMsg{message: fmt.Sprintf("Moved worktree from %s to %s", worktreePath, targetPath)}
 	}
 }
 
