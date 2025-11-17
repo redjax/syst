@@ -14,22 +14,7 @@ import (
 )
 
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
-// UpgradeSelf is the entrypoint for 'syst self upgrade'.
 func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
-	if runtime.GOOS == "windows" {
-		// Show current version information first
-		info := GetPackageInfo()
-		fmt.Printf("Current version: %s (commit: %s, built: %s)\n\n",
-			info.PackageVersion,
-			info.PackageCommit,
-			info.PackageReleaseDate)
-
-		scriptBlock := "if ($p = (Get-Command -Name syst -ErrorAction SilentlyContinue)) { Remove-Item $p.Path }; & ([scriptblock]::Create((irm https://raw.githubusercontent.com/redjax/syst/refs/heads/main/scripts/install-syst.ps1))) -Auto"
-		ghIssueLink := "https://github.com/redjax/syst/issues/81"
-		fmt.Printf("⚠️  The 'self upgrade' command does not work correctly on Windows yet: %s.\n\nTo upgrade, run this in your terminal:\n  %s\n", ghIssueLink, scriptBlock)
-		os.Exit(0)
-	}
-
 	info := GetPackageInfo()
 
 	repo, err := getRepoUrlPath()
@@ -287,16 +272,19 @@ func TrySelfUpgrade() {
 		// New file exists: perform replacement
 
 		if runtime.GOOS == "windows" {
-			// Use Windows-specific updater
+			// Use Windows-specific updater (launches background script and exits)
 			err := RunWindowsSelfUpgrade(exePath, newPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Syst Windows self-upgrade failed: %v\n", err)
+				fmt.Fprintf(os.Stderr, "syst Windows self-upgrade failed: %v\n", err)
 			} else {
-				fmt.Fprintf(os.Stderr, "🔁 syst upgraded successfully.\n")
-				// Exit after successful upgrade so new exe is run by RunWindowsSelfUpgrade
+				fmt.Fprintf(os.Stderr, "🔁 Applying upgrade...\n")
+				// Exit immediately so the background script can replace the .exe
 				os.Exit(0)
 			}
+			return
 		}
+
+		// Unix: direct rename works because the file isn't locked
 		errRename := os.Rename(newPath, exePath)
 
 		if errRename != nil {
