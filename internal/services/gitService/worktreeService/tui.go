@@ -104,6 +104,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.message = ""
 		return m, nil
 
+	case terminalOnlyMsg:
+		// In terminal-only mode, print instructions and exit
+		fmt.Printf("\n📂 Opening worktree in terminal-only mode\n")
+		fmt.Printf("\n💡 Copy and run this command:\n\n")
+		fmt.Printf("   cd %s\n\n", msg.path)
+		return m, tea.Quit
+
 	case successMsg:
 		m.message = msg.message
 		m.currentView = listView
@@ -514,10 +521,20 @@ func moveWorktree(manager *WorktreeManager, worktreePath, destDir, newName strin
 func openWorktree(path string) tea.Cmd {
 	return func() tea.Msg {
 		if err := OpenInEditor(path); err != nil {
+			// Check if it's a terminal-only error
+			if termErr, ok := err.(*TerminalOnlyError); ok {
+				// Return special message that will exit TUI
+				return terminalOnlyMsg{path: termErr.Path}
+			}
 			return errMsg{err: err}
 		}
 		return successMsg{message: fmt.Sprintf("Opened %s in editor", path)}
 	}
+}
+
+// terminalOnlyMsg is sent when we're in a terminal-only environment
+type terminalOnlyMsg struct {
+	path string
 }
 
 // RunWorktreeTUI starts the worktree TUI
