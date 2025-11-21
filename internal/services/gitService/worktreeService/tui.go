@@ -20,18 +20,19 @@ const (
 )
 
 type model struct {
-	worktrees     []Worktree
-	manager       *WorktreeManager
-	cursor        int
-	err           error
-	currentView   viewMode
-	formInputs    []textinput.Model
-	focusedInput  int
-	formType      string // "add" or "move"
-	confirmAction string
-	confirmTarget string
-	tuiHelper     *terminal.ResponsiveTUIHelper
-	message       string
+	worktrees        []Worktree
+	manager          *WorktreeManager
+	cursor           int
+	err              error
+	currentView      viewMode
+	formInputs       []textinput.Model
+	focusedInput     int
+	formType         string // "add" or "move"
+	confirmAction    string
+	confirmTarget    string
+	tuiHelper        *terminal.ResponsiveTUIHelper
+	message          string
+	terminalOnlyPath string // Set when exiting for terminal-only cd
 }
 
 type worktreesLoadedMsg struct {
@@ -103,6 +104,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.worktrees = msg.worktrees
 		m.message = ""
 		return m, nil
+
+	case terminalOnlyMsg:
+		// In terminal-only mode, save path and exit
+		// Message will be printed after TUI cleans up
+		m.terminalOnlyPath = msg.path
+		return m, tea.Quit
 
 	case successMsg:
 		m.message = msg.message
@@ -514,10 +521,20 @@ func moveWorktree(manager *WorktreeManager, worktreePath, destDir, newName strin
 func openWorktree(path string) tea.Cmd {
 	return func() tea.Msg {
 		if err := OpenInEditor(path); err != nil {
+			// Check if it's a terminal-only error
+			if termErr, ok := err.(*TerminalOnlyError); ok {
+				// Return special message that will exit TUI
+				return terminalOnlyMsg{path: termErr.Path}
+			}
 			return errMsg{err: err}
 		}
 		return successMsg{message: fmt.Sprintf("Opened %s in editor", path)}
 	}
+}
+
+// terminalOnlyMsg is sent when we're in a terminal-only environment
+type terminalOnlyMsg struct {
+	path string
 }
 
 // RunWorktreeTUI starts the worktree TUI
@@ -528,6 +545,17 @@ func RunWorktreeTUI(repoPath string) error {
 	}
 
 	p := tea.NewProgram(initialModel(manager), tea.WithAltScreen())
-	_, err = p.Run()
-	return err
+	finalModel, err := p.Run()
+	if err != nil {
+		return err
+	}
+
+	// Check if we exited for terminal-only cd
+	if m, ok := finalModel.(model); ok && m.terminalOnlyPath != "" {
+		fmt.Printf("\n📂 Opening worktree in terminal-only mode\n")
+		fmt.Printf("\n💡 Copy and run this command:\n\n")
+		fmt.Printf("   cd %s\n\n", m.terminalOnlyPath)
+	}
+
+	return nil
 }

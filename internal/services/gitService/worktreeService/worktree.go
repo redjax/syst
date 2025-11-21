@@ -301,8 +301,30 @@ func (wm *WorktreeManager) GenerateWorktreePath(branchName string) string {
 	return filepath.Join(parentDir, fmt.Sprintf("%s-%s", repoName, branchName))
 }
 
+// isTerminalOnly checks if we're in a terminal-only environment (SSH, no GUI)
+func isTerminalOnly() bool {
+	// Check if SSH session
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" {
+		return true
+	}
+
+	// On Linux/Unix, check if DISPLAY is set (X11)
+	if runtime.GOOS == "linux" && os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+		return true
+	}
+
+	return false
+}
+
 // OpenInEditor opens a worktree in the system's default editor
+// Returns a special error type if in terminal-only mode
 func OpenInEditor(path string) error {
+	// Check if we're in a terminal-only environment
+	if isTerminalOnly() {
+		// Return special error indicating terminal mode
+		return &TerminalOnlyError{Path: path}
+	}
+
 	var cmd *exec.Cmd
 	var cmdName string
 
@@ -350,4 +372,13 @@ func OpenInEditor(path string) error {
 
 	// Don't wait for the command to finish since editors run in background
 	return nil
+}
+
+// TerminalOnlyError indicates we're in a terminal-only environment
+type TerminalOnlyError struct {
+	Path string
+}
+
+func (e *TerminalOnlyError) Error() string {
+	return fmt.Sprintf("terminal-only mode: %s", e.Path)
 }
