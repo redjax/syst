@@ -320,7 +320,13 @@ func isTerminalOnly() bool {
 // Returns a special error type if in terminal-only mode
 func OpenInEditor(path string) error {
 	// Check if we're in a terminal-only environment
-	if isTerminalOnly() {
+	termOnly := isTerminalOnly()
+
+	// Debug: always show what we detected (remove after testing)
+	fmt.Fprintf(os.Stderr, "[DEBUG] isTerminalOnly=%v, SSH_CONNECTION=%q, DISPLAY=%q\n",
+		termOnly, os.Getenv("SSH_CONNECTION"), os.Getenv("DISPLAY"))
+
+	if termOnly {
 		// Return special error indicating terminal mode
 		return &TerminalOnlyError{Path: path}
 	}
