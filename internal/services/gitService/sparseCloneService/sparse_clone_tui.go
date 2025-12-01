@@ -298,97 +298,219 @@ func (m model) View() string {
 func (m model) renderFormView() string {
 	var b strings.Builder
 
+	// Title - ALWAYS visible, never scrolls
 	b.WriteString(titleStyle.Render("🔧 Git Sparse Clone Configuration"))
 	b.WriteString("\n\n")
 
-	// Provider
-	b.WriteString(labelStyle.Render("Git Provider:"))
-	b.WriteString("\n")
-	b.WriteString(m.inputs[providerInput].View())
+	// Calculate available height for scrolling content
+	// Reserve lines for: title (3), scroll indicators (2), help text (1), margins (2)
+	availableHeight := m.terminalHeight - 8
+	if availableHeight < 6 {
+		availableHeight = 6
+	}
+
+	// Build all form content into a slice of lines
+	allLines := []string{}
+
+	// Provider (lines 0-2)
+	allLines = append(allLines, labelStyle.Render("Git Provider:"))
+	inputLine := m.inputs[providerInput].View()
 	if m.focused == providerInput {
-		b.WriteString(helpStyle.Render(" (github, gitlab, codeberg)"))
+		inputLine += helpStyle.Render(" (github, gitlab, codeberg)")
 	}
-	b.WriteString("\n\n")
+	allLines = append(allLines, inputLine)
+	allLines = append(allLines, "") // spacing
 
-	// Protocol
-	b.WriteString(labelStyle.Render("Protocol:"))
-	b.WriteString("\n")
-	b.WriteString(m.inputs[protocolInput].View())
+	// Protocol (lines 3-5)
+	allLines = append(allLines, labelStyle.Render("Protocol:"))
+	inputLine = m.inputs[protocolInput].View()
 	if m.focused == protocolInput {
-		b.WriteString(helpStyle.Render(" (ssh, https)"))
+		inputLine += helpStyle.Render(" (ssh, https)")
 	}
-	b.WriteString("\n\n")
+	allLines = append(allLines, inputLine)
+	allLines = append(allLines, "")
 
-	// Username
-	b.WriteString(labelStyle.Render("Username/Organization:"))
-	b.WriteString("\n")
-	b.WriteString(m.inputs[userInput].View())
-	b.WriteString("\n\n")
+	// Username (lines 6-8)
+	allLines = append(allLines, labelStyle.Render("Username/Organization:"))
+	allLines = append(allLines, m.inputs[userInput].View())
+	allLines = append(allLines, "")
 
-	// Repository
-	b.WriteString(labelStyle.Render("Repository Name:"))
-	b.WriteString("\n")
-	b.WriteString(m.inputs[repositoryInput].View())
-	b.WriteString("\n\n")
+	// Repository (lines 9-11)
+	allLines = append(allLines, labelStyle.Render("Repository Name:"))
+	allLines = append(allLines, m.inputs[repositoryInput].View())
+	allLines = append(allLines, "")
 
-	// Output Directory
-	b.WriteString(labelStyle.Render("Output Directory:"))
-	b.WriteString("\n")
-	b.WriteString(m.inputs[outputInput].View())
+	// Output Directory (lines 12-14)
+	allLines = append(allLines, labelStyle.Render("Output Directory:"))
+	inputLine = m.inputs[outputInput].View()
 	if m.focused == outputInput {
-		b.WriteString(helpStyle.Render(" (optional)"))
+		inputLine += helpStyle.Render(" (optional)")
 	}
-	b.WriteString("\n\n")
+	allLines = append(allLines, inputLine)
+	allLines = append(allLines, "")
 
-	// Branch
-	b.WriteString(labelStyle.Render("Branch:"))
-	b.WriteString("\n")
-	b.WriteString(m.inputs[branchInput].View())
-	b.WriteString("\n\n")
+	// Branch (lines 15-17)
+	allLines = append(allLines, labelStyle.Render("Branch:"))
+	allLines = append(allLines, m.inputs[branchInput].View())
+	allLines = append(allLines, "")
 
-	// Paths
-	b.WriteString(labelStyle.Render("Sparse Checkout Paths:"))
-	b.WriteString("\n")
+	// Track where paths section starts for scroll calculation
+	pathsSectionStart := len(allLines)
+
+	// Paths section
+	allLines = append(allLines, labelStyle.Render("Sparse Checkout Paths:"))
 	if len(m.pathsList) > 0 {
-		for i, path := range m.pathsList {
-			if m.pathEditMode && i == m.pathCursor {
-				b.WriteString(selectedPathStyle.Render(fmt.Sprintf("► %d. %s", i+1, path)))
-			} else {
-				b.WriteString(pathItemStyle.Render(fmt.Sprintf("  %d. %s", i+1, path)))
-			}
-			b.WriteString("\n")
+		// Limit displayed paths to fit
+		maxPathsToShow := availableHeight / 3
+		if maxPathsToShow < 3 {
+			maxPathsToShow = 3
 		}
-		b.WriteString("\n")
+
+		startIdx := 0
+		if len(m.pathsList) > maxPathsToShow {
+			if m.pathEditMode {
+				startIdx = m.pathCursor - maxPathsToShow/2
+				if startIdx < 0 {
+					startIdx = 0
+				}
+				if startIdx+maxPathsToShow > len(m.pathsList) {
+					startIdx = len(m.pathsList) - maxPathsToShow
+				}
+			}
+		}
+
+		endIdx := startIdx + maxPathsToShow
+		if endIdx > len(m.pathsList) {
+			endIdx = len(m.pathsList)
+		}
+
+		if startIdx > 0 {
+			allLines = append(allLines, helpStyle.Render(fmt.Sprintf("  ... (%d more above)", startIdx)))
+		}
+
+		for i := startIdx; i < endIdx; i++ {
+			if m.pathEditMode && i == m.pathCursor {
+				allLines = append(allLines, selectedPathStyle.Render(fmt.Sprintf("► %d. %s", i+1, m.pathsList[i])))
+			} else {
+				allLines = append(allLines, pathItemStyle.Render(fmt.Sprintf("  %d. %s", i+1, m.pathsList[i])))
+			}
+		}
+
+		if endIdx < len(m.pathsList) {
+			allLines = append(allLines, helpStyle.Render(fmt.Sprintf("  ... (%d more below)", len(m.pathsList)-endIdx)))
+		}
+		allLines = append(allLines, "")
 	}
-	b.WriteString(m.inputs[pathsInput].View())
-	b.WriteString("\n")
+
+	inputLine = m.inputs[pathsInput].View()
+	allLines = append(allLines, inputLine)
+
 	if m.focused == pathsInput {
+		var helpText string
 		if len(m.pathsList) > 0 {
 			if m.pathEditMode {
-				b.WriteString(helpStyle.Render("Path Edit Mode: ↑/↓: navigate • d: delete • Enter: exit edit"))
+				helpText = "Path Edit Mode: ↑/↓: navigate • d: delete • Enter: exit edit"
 			} else {
 				currentInput := strings.TrimSpace(m.inputs[pathsInput].Value())
 				if currentInput == "" {
-					b.WriteString(helpStyle.Render("Enter: add path • p: edit existing paths • Backspace: remove last"))
+					helpText = "Enter: add path • p: edit existing paths • Backspace: remove last"
 				} else {
-					b.WriteString(helpStyle.Render("Enter: add path • Backspace: remove last"))
+					helpText = "Enter: add path • Backspace: remove last"
 				}
 			}
 		} else {
-			b.WriteString(helpStyle.Render("Enter: add path"))
+			helpText = "Enter: add path"
 		}
+		allLines = append(allLines, helpStyle.Render(helpText))
 	}
-	b.WriteString("\n\n")
+	allLines = append(allLines, "")
 
 	// Confirmation
-	if m.focused >= confirmInput && len(m.pathsList) > 0 {
-		b.WriteString(labelStyle.Render("Proceed with sparse clone? (y/N):"))
-		b.WriteString("\n")
-		b.WriteString(m.inputs[confirmInput].View())
-		b.WriteString("\n\n")
+	confirmSectionStart := len(allLines)
+	if len(m.pathsList) > 0 {
+		allLines = append(allLines, labelStyle.Render("Proceed with sparse clone? (y/N):"))
+		allLines = append(allLines, m.inputs[confirmInput].View())
+		allLines = append(allLines, "")
 	}
 
+	// Calculate which line the focused input is on
+	focusedInputLine := 0
+	switch m.focused {
+	case providerInput:
+		focusedInputLine = 1 // The input line, not the label
+	case protocolInput:
+		focusedInputLine = 4
+	case userInput:
+		focusedInputLine = 7
+	case repositoryInput:
+		focusedInputLine = 10
+	case outputInput:
+		focusedInputLine = 13
+	case branchInput:
+		focusedInputLine = 16
+	case pathsInput:
+		focusedInputLine = pathsSectionStart + 1 + len(m.pathsList)
+		if len(m.pathsList) > 0 {
+			focusedInputLine++ // Extra line for paths display separator
+		}
+	case confirmInput:
+		focusedInputLine = confirmSectionStart + 1
+	}
+
+	// Calculate scroll offset to keep focused input visible
+	// Keep the focused line in the middle third of the viewport
+	scrollOffset := 0
+	if focusedInputLine > availableHeight/3 {
+		scrollOffset = focusedInputLine - availableHeight/3
+	}
+
+	// Don't scroll past the end
+	maxScrollOffset := len(allLines) - availableHeight
+	if maxScrollOffset < 0 {
+		maxScrollOffset = 0
+	}
+	if scrollOffset > maxScrollOffset {
+		scrollOffset = maxScrollOffset
+	}
+
+	// Adjust available height to account for scroll indicators
+	// If we're scrolled, we'll show indicators which take up lines
+	displayHeight := availableHeight
+	if scrollOffset > 0 {
+		displayHeight-- // "▲ More above" takes 1 line
+	}
+	if scrollOffset+availableHeight < len(allLines) {
+		displayHeight-- // "▼ More below" takes 1 line
+	}
+
+	// Calculate visible range using adjusted height
+	endLine := scrollOffset + displayHeight
+	if endLine > len(allLines) {
+		endLine = len(allLines)
+	}
+
+	// Add scroll indicator at top of content area if scrolled down
+	if scrollOffset > 0 {
+		b.WriteString(helpStyle.Render("▲ More above"))
+		b.WriteString("\n")
+	}
+
+	// Render visible content lines
+	visibleLines := allLines[scrollOffset:endLine]
+	for _, line := range visibleLines {
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+
+	// Add scroll indicator at bottom if there's more content
+	if endLine < len(allLines) {
+		b.WriteString(helpStyle.Render("▼ More below"))
+		b.WriteString("\n")
+	}
+
+	// Error message (if any)
 	if m.err != nil {
+		b.WriteString("\n")
 		b.WriteString(errorStyle.Render(fmt.Sprintf("Error: %v", m.err)))
 		b.WriteString("\n")
 	}
@@ -396,7 +518,6 @@ func (m model) renderFormView() string {
 	// Help text
 	if m.pathEditMode {
 		// Don't show additional help when in path edit mode
-		// (help is already shown above near the paths)
 	} else if m.focused == pathsInput {
 		// Don't show global help when focused on paths
 		// (help is already shown above near the paths)
