@@ -376,25 +376,33 @@ func (m model) renderFormView() string {
 	// Set title based on form type
 	title := "New Worktree"
 	actionText := "create"
-	helpText := "Branches are auto-created if they don't exist\n\n"
+	helpText := "Branches are auto-created if they don't exist"
 
 	if m.formType == "move" {
 		title = "Move Worktree"
 		actionText = "move"
-		helpText = "Leave name empty to keep current directory name\n\n"
+		helpText = "Leave name empty to keep current directory name"
 	}
 
 	s.WriteString(titleStyle.Render(title) + "\n\n")
 
+	// Render all form inputs (Bubbletea will handle scrolling with proper terminal size)
 	for i, input := range m.formInputs {
+		// Show which field is focused
+		if i == m.focusedInput {
+			s.WriteString("► ")
+		} else {
+			s.WriteString("  ")
+		}
 		s.WriteString(input.View() + "\n")
 		if i < len(m.formInputs)-1 {
 			s.WriteString("\n")
 		}
 	}
 
-	s.WriteString("\n\n")
+	s.WriteString("\n")
 	s.WriteString(helpStyle.Render(helpText))
+	s.WriteString("\n")
 	s.WriteString(helpStyle.Render(fmt.Sprintf("(Tab) next field  (Enter) %s  (Esc) cancel", actionText)))
 
 	return formStyle.Render(s.String())
