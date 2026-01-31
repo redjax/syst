@@ -1,0 +1,6 @@
+[tools]
+## https://mise-tools.jdx.dev/tools/go
+#  The version in go.mod should be the same as this
+go = "1.25.6"
+## https://mise-tools.jdx.dev/tools/goreleaser
+goreleaser = "latest"
