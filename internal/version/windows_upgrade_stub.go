@@ -3,7 +3,6 @@
 
 package version
 
-func RunWindowsSelfUpgrade(oldExe, newExe string) error {
-	// no-op on non-Windows platform
-	return nil
-}
+// This file is intentionally empty.
+// Windows binary replacement is handled by replaceWindows() in upgrade.go,
+// which is only called on runtime.GOOS == "windows".
