@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -14,6 +16,8 @@ import (
 )
 
 // UpgradeSelf is the entrypoint for 'syst self upgrade'.
+// It downloads the latest release, extracts the binary, replaces the current
+// executable in-place, verifies the new binary, and rolls back on failure.
 func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	info := GetPackageInfo()
 
@@ -139,23 +143,97 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 	}
 	defer os.Remove(binaryTmp)
 
+	// Get current executable path and resolve symlinks
 	exePath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("failed to get executable path: %w", err)
 	}
+	exePath, err = filepath.EvalSymlinks(exePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve executable path: %w", err)
+	}
 
-	newPath := exePath + ".new"
-	if err := copyFile(binaryTmp, newPath); err != nil {
+	// Create backup of current binary
+	backupPath := exePath + ".bak"
+	fmt.Fprintf(cmd.ErrOrStderr(), "Backing up current binary to %s\n", backupPath)
+	if err := copyFile(exePath, backupPath); err != nil {
 		if os.IsPermission(err) {
 			fmt.Fprintln(cmd.ErrOrStderr(), "Permission denied: try running with 'sudo syst self upgrade'")
 		}
-		return fmt.Errorf("failed to save new binary: %w", err)
+		return fmt.Errorf("failed to create backup: %w", err)
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(),
-		"✅ Upgrade downloaded:\n  %s\n"+
-			"  It will be applied next time you run a syst command, i.e. syst --version.\n",
-		newPath)
+	// Replace the binary (platform-specific)
+	if runtime.GOOS == "windows" {
+		if err := replaceWindows(exePath, binaryTmp); err != nil {
+			fmt.Fprintln(cmd.ErrOrStderr(), "Restoring backup after failed install...")
+			restoreErr := os.Rename(backupPath, exePath)
+			if restoreErr != nil {
+				fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Failed to restore backup: %v\n", restoreErr)
+			}
+			return fmt.Errorf("failed to install new binary: %w", err)
+		}
+	} else {
+		// Unix: try os.Rename first (atomic). Falls back to copy+remove if the
+		// temp dir is on a different filesystem (EXDEV).
+		if err := os.Rename(binaryTmp, exePath); err != nil {
+			// Cross-device rename — fall back to copy
+			if cpErr := copyFile(binaryTmp, exePath); cpErr != nil {
+				if os.IsPermission(cpErr) {
+					fmt.Fprintln(cmd.ErrOrStderr(), "Permission denied: try running with 'sudo syst self upgrade'")
+				}
+				return fmt.Errorf("failed to install new binary: %w", cpErr)
+			}
+		}
+	}
+
+	// Verify the new binary actually works
+	fmt.Fprintln(cmd.ErrOrStderr(), "Verifying new binary...")
+	if err := verifyBinary(exePath); err != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Verification failed: %v\n", err)
+		fmt.Fprintln(cmd.ErrOrStderr(), "Rolling back to previous version...")
+
+		rollbackErr := os.Rename(backupPath, exePath)
+		if rollbackErr != nil {
+			return fmt.Errorf("rollback also failed: %w (original error: %v)", rollbackErr, err)
+		}
+
+		fmt.Fprintln(cmd.ErrOrStderr(), "✓ Rolled back successfully")
+		return fmt.Errorf("upgrade aborted: new binary failed verification: %w", err)
+	}
+
+	// Clean up backup after successful verification
+	os.Remove(backupPath)
+
+	// Clean up any stale .new files from the old upgrade mechanism
+	os.Remove(exePath + ".new")
+
+	fmt.Fprintf(cmd.ErrOrStderr(), "✅ syst upgraded successfully to %s\n", latest)
+	return nil
+}
+
+// replaceWindows handles binary replacement on Windows where the running exe is locked.
+// It moves the old binary out of the way, then copies the new one in.
+func replaceWindows(exePath, newBinaryPath string) error {
+	oldPath := exePath + ".old"
+
+	// Remove any stale .old file from a previous upgrade
+	os.Remove(oldPath)
+
+	// Move current exe to .old (Windows allows renaming a running exe)
+	if err := os.Rename(exePath, oldPath); err != nil {
+		return fmt.Errorf("failed to move old binary: %w", err)
+	}
+
+	// Copy new binary into place
+	if err := copyFile(newBinaryPath, exePath); err != nil {
+		// Try to restore the old binary
+		os.Rename(oldPath, exePath)
+		return fmt.Errorf("failed to copy new binary: %w", err)
+	}
+
+	// Best-effort cleanup of .old
+	os.Remove(oldPath)
 
 	return nil
 }
@@ -258,39 +336,13 @@ func copyFile(src, dst string) error {
 	return out.Chmod(0755)
 }
 
-// TrySelfUpgrade checks if "<binary>.new" exists and replaces current binary with it.
-func TrySelfUpgrade() {
-	exePath, err := os.Executable()
+// verifyBinary runs `<binary> self version` to confirm the new binary is functional.
+func verifyBinary(path string) error {
+	// #nosec G204 - Path is the resolved executable path, not user input
+	cmd := exec.Command(path, "self", "version")
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get executable path: %v\n", err)
-		return
+		return fmt.Errorf("binary at %s failed to run: %w (output: %s)", path, err, strings.TrimSpace(string(output)))
 	}
-
-	newPath := exePath + ".new"
-
-	if _, err := os.Stat(newPath); err == nil {
-		// New file exists: perform replacement
-
-		if runtime.GOOS == "windows" {
-			// Use Windows-specific updater (launches background script and exits)
-			err := RunWindowsSelfUpgrade(exePath, newPath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "syst Windows self-upgrade failed: %v\n", err)
-			} else {
-				fmt.Fprintf(os.Stderr, "🔁 Applying upgrade...\n")
-				// Exit immediately so the background script can replace the .exe
-				os.Exit(0)
-			}
-			return
-		}
-
-		// Unix: direct rename works because the file isn't locked
-		errRename := os.Rename(newPath, exePath)
-
-		if errRename != nil {
-			fmt.Fprintf(os.Stderr, "Failed to replace executable: %v\n", errRename)
-		} else {
-			fmt.Fprintf(os.Stderr, "🔁 syst upgraded successfully.\n")
-		}
-	}
+	return nil
 }
