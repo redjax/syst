@@ -177,7 +177,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				if len(m.tables) > 0 {
 					m.tableName = m.tables[m.tableIndex]
-					m.query = fmt.Sprintf("SELECT rowid, * FROM %s", m.tableName)
+					if q, err := m.svc.BuildTableQuery(m.tableName); err == nil {
+						m.query = q
+					} else {
+						m.query = fmt.Sprintf("SELECT rowid, * FROM %s", m.tableName)
+					}
 					m.offset = 0
 					m.loading = true
 					m.mode = modeTable
