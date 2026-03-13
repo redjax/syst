@@ -50,20 +50,14 @@ func (m UIModel) buildTable() t.Model {
 		colWidth = minColWidth
 	}
 
-	// column defs: just the database columns
-	// Highlight the currently selected column
-	selectedColStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("229")). // bright yellow text
-		Background(lipgloss.Color("57"))   // purple background
-
+	// column defs: mark selected column header with indicator
 	cols := []t.Column{}
 	for i, c := range filteredCols {
-		col := t.NewColumn(c, c, colWidth)
+		title := c
 		if i == m.selectedCol {
-			col = col.WithStyle(selectedColStyle)
+			title = "► " + c
 		}
-		cols = append(cols, col)
+		cols = append(cols, t.NewColumn(c, title, colWidth))
 	}
 
 	// Row highlight style for the focused row

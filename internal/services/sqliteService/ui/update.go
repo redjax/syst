@@ -341,12 +341,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "n":
 				if len(m.rows) == m.limit {
 					m.offset += m.limit
+					m.selectedIndex = 0
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
 			case "p":
-				if m.offset >= m.limit {
+				if m.offset > 0 {
 					m.offset -= m.limit
+					if m.offset < 0 {
+						m.offset = 0
+					}
+					m.selectedIndex = 0
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
@@ -505,11 +510,16 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"rowid":           {}, // exclude from visible columns
 		}
 		filtered := []string{}
+		seen := make(map[string]bool)
 		for _, c := range msg.columns {
 			n := strings.TrimSpace(c)
 			if _, isReserved := reserved[n]; isReserved {
 				continue
 			}
+			if seen[n] {
+				continue
+			}
+			seen[n] = true
 			filtered = append(filtered, n)
 		}
 		m.columns = filtered
