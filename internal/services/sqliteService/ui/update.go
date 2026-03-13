@@ -232,6 +232,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// column navigation - move left
 				if m.selectedCol > 0 {
 					m.selectedCol--
+					m.tableComp = m.buildTable()
 					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
 				}
 				return m, nil
@@ -240,6 +241,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// column navigation - move right
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
+					m.tableComp = m.buildTable()
 					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
 				}
 				return m, nil

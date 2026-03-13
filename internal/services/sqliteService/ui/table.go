@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	t "github.com/evertras/bubble-table/table"
 )
 
@@ -50,10 +51,25 @@ func (m UIModel) buildTable() t.Model {
 	}
 
 	// column defs: just the database columns
+	// Highlight the currently selected column
+	selectedColStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("229")). // bright yellow text
+		Background(lipgloss.Color("57"))   // purple background
+
 	cols := []t.Column{}
-	for _, c := range filteredCols {
-		cols = append(cols, t.NewColumn(c, c, colWidth))
+	for i, c := range filteredCols {
+		col := t.NewColumn(c, c, colWidth)
+		if i == m.selectedCol {
+			col = col.WithStyle(selectedColStyle)
+		}
+		cols = append(cols, col)
 	}
+
+	// Row highlight style for the focused row
+	highlightStyle := lipgloss.NewStyle().
+		Bold(true).
+		Background(lipgloss.Color("236")) // subtle dark gray background
 
 	// rows
 	var tRows []t.Row
@@ -81,5 +97,6 @@ func (m UIModel) buildTable() t.Model {
 	return t.New(cols).
 		WithRows(tRows).
 		SelectableRows(true).
-		Focused(true)
+		Focused(true).
+		HighlightStyle(highlightStyle)
 }
