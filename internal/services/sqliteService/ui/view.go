@@ -98,6 +98,23 @@ func (m UIModel) viewTable() string {
 		b.WriteString(strings.Repeat("═", 80) + "\n")
 	}
 
+	// Pagination indicator — always show both hints so user knows the keys
+	page := m.offset/m.limit + 1
+	hasNext := len(m.rows) == m.limit
+	hasPrev := m.offset > 0
+	var pageHints []string
+	if hasPrev {
+		pageHints = append(pageHints, "p: prev page")
+	} else {
+		pageHints = append(pageHints, "p: prev page (-)")
+	}
+	if hasNext {
+		pageHints = append(pageHints, "n: next page")
+	} else {
+		pageHints = append(pageHints, "n: next page (-)")
+	}
+	b.WriteString(fmt.Sprintf("Page %d (%d rows) | %s\n", page, len(m.rows), strings.Join(pageHints, " | ")))
+
 	b.WriteString("↑/↓: row | ←/→: column | Space: select | e: expand | x: export table | X: export selected | Ctrl+S: save results\n")
 	b.WriteString("s: schema | i: info | I: indexes | v: views | dd: delete | /: query | m: import CSV | q: quit\n")
 	return b.String()

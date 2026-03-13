@@ -177,7 +177,11 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				if len(m.tables) > 0 {
 					m.tableName = m.tables[m.tableIndex]
-					m.query = fmt.Sprintf("SELECT rowid, * FROM %s", m.tableName)
+					if q, err := m.svc.BuildTableQuery(m.tableName); err == nil {
+						m.query = q
+					} else {
+						m.query = fmt.Sprintf("SELECT rowid, * FROM %s", m.tableName)
+					}
 					m.offset = 0
 					m.loading = true
 					m.mode = modeTable
@@ -232,6 +236,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// column navigation - move left
 				if m.selectedCol > 0 {
 					m.selectedCol--
+					m.tableComp = m.buildTable()
 					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
 				}
 				return m, nil
@@ -240,6 +245,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// column navigation - move right
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
+					m.tableComp = m.buildTable()
 					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
 				}
 				return m, nil
@@ -335,12 +341,17 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "n":
 				if len(m.rows) == m.limit {
 					m.offset += m.limit
+					m.selectedIndex = 0
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
 			case "p":
-				if m.offset >= m.limit {
+				if m.offset > 0 {
 					m.offset -= m.limit
+					if m.offset < 0 {
+						m.offset = 0
+					}
+					m.selectedIndex = 0
 					m.loading = true
 					return m, m.runQueryCmd()
 				}
@@ -499,11 +510,16 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			"rowid":           {}, // exclude from visible columns
 		}
 		filtered := []string{}
+		seen := make(map[string]bool)
 		for _, c := range msg.columns {
 			n := strings.TrimSpace(c)
 			if _, isReserved := reserved[n]; isReserved {
 				continue
 			}
+			if seen[n] {
+				continue
+			}
+			seen[n] = true
 			filtered = append(filtered, n)
 		}
 		m.columns = filtered

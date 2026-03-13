@@ -111,7 +111,11 @@ func NewUIModel(svc *sqliteservice.SQLiteService, startTable string) UIModel {
 	if startTable != "" {
 		m.mode = modeTable
 		m.tableName = startTable
-		m.query = fmt.Sprintf("SELECT rowid, * FROM %s", startTable)
+		if q, err := svc.BuildTableQuery(startTable); err == nil {
+			m.query = q
+		} else {
+			m.query = fmt.Sprintf("SELECT rowid, * FROM %s", startTable)
+		}
 	} else {
 		m.mode = modeLauncher
 	}
