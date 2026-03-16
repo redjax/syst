@@ -88,11 +88,13 @@ jobs:
           cache: false
 
       - name: Install cross-compilation toolchains
+        timeout-minutes: 5
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu gcc-mingw-w64-x86-64
 
       - name: Install svu
+        timeout-minutes: 3
         run: |
           echo "Installing svu"
           go install github.com/caarlos0/svu@latest
@@ -201,6 +203,7 @@ jobs:
           git push origin "${{ steps.version.outputs.version }}"
 
       - name: Run GoReleaser
+        timeout-minutes: 15
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
