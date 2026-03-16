@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ExpandPath(p string) (string, error) {
@@ -11,7 +12,7 @@ func ExpandPath(p string) (string, error) {
 		return "", fmt.Errorf("empty path")
 	}
 
-	if p[:2] == "~/" || p == "~" {
+	if p == "~" || strings.HasPrefix(p, "~/") {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", fmt.Errorf("failed to get home directory: %w", err)
