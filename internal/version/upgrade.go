@@ -174,13 +174,23 @@ func UpgradeSelf(cmd *cobra.Command, args []string, checkOnly bool) error {
 			return fmt.Errorf("failed to install new binary: %w", err)
 		}
 	} else {
-		// Unix: try os.Rename first (atomic). Falls back to copy+remove if the
+		// Unix: try os.Rename first (atomic). Falls back to remove+copy if the
 		// temp dir is on a different filesystem (EXDEV).
 		if err := os.Rename(binaryTmp, exePath); err != nil {
-			// Cross-device rename — fall back to copy
-			if cpErr := copyFile(binaryTmp, exePath); cpErr != nil {
-				if os.IsPermission(cpErr) {
+			// Cross-device rename — remove the running binary first to avoid
+			// "text file busy" (Linux allows unlinking a running executable,
+			// but not writing to it in-place).
+			if rmErr := os.Remove(exePath); rmErr != nil {
+				if os.IsPermission(rmErr) {
 					fmt.Fprintln(cmd.ErrOrStderr(), "Permission denied: try running with 'sudo syst self upgrade'")
+				}
+				return fmt.Errorf("failed to remove old binary: %w", rmErr)
+			}
+			if cpErr := copyFile(binaryTmp, exePath); cpErr != nil {
+				// Restore from backup since we already deleted the original
+				fmt.Fprintln(cmd.ErrOrStderr(), "Restoring backup after failed install...")
+				if restoreErr := copyFile(backupPath, exePath); restoreErr != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Failed to restore backup: %v\n", restoreErr)
 				}
 				return fmt.Errorf("failed to install new binary: %w", cpErr)
 			}
