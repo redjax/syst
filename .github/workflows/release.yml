@@ -54,9 +54,17 @@ jobs:
       contents: read
       security-events: write
 
+  test:
+    name: Run tests
+    needs: check-commits
+    if: needs.check-commits.outputs.should_release == 'true'
+    uses: ./.github/workflows/tests.yml
+    permissions:
+      contents: read
+
   release:
     name: Create release
-    needs: [check-commits, security-scan, vulnerability-scan]
+    needs: [check-commits, security-scan, vulnerability-scan, test]
     if: needs.check-commits.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
