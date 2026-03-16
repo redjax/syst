@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	sqliteservice "github.com/redjax/syst/internal/services/sqliteService"
 )
 
 // runQueryCmd runs the current SQL query (with limit/offset) in a goroutine.
@@ -18,6 +20,20 @@ func (m UIModel) runQueryCmd() tea.Cmd {
 			return fmt.Errorf("query error: %w", err)
 		}
 		return queryResultMsg{columns: cols, rows: rows}
+	}
+}
+
+// loadRowCountCmd fetches the total row count for the current table.
+func (m UIModel) loadRowCountCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.tableName == "" {
+			return rowCountMsg{count: -1}
+		}
+		count, err := m.svc.GetTableRowCount(m.tableName)
+		if err != nil {
+			return rowCountMsg{count: -1, err: err}
+		}
+		return rowCountMsg{count: count}
 	}
 }
 
@@ -56,7 +72,10 @@ func (m UIModel) dropTableCmd(tableName string) tea.Cmd {
 // loadSchemaCmd loads schema information for a table
 func (m UIModel) loadSchemaCmd(tableName string) tea.Cmd {
 	return func() tea.Msg {
-		// Query PRAGMA table_info to get schema information
+		if !sqliteservice.ValidTableName(tableName) {
+			return schemaLoadedMsg{tableName: tableName, schema: nil, err: fmt.Errorf("invalid table name")}
+		}
+		// #nosec G201 - table name is validated above
 		query := fmt.Sprintf("PRAGMA table_info(%s)", tableName)
 		_, rows, err := m.svc.Query(query, nil)
 		if err != nil {
@@ -69,7 +88,10 @@ func (m UIModel) loadSchemaCmd(tableName string) tea.Cmd {
 // loadTableInfoCmd loads detailed table information
 func (m UIModel) loadTableInfoCmd(tableName string) tea.Cmd {
 	return func() tea.Msg {
-		// Get row count and other table statistics
+		if !sqliteservice.ValidTableName(tableName) {
+			return tableInfoLoadedMsg{tableName: tableName, info: nil, err: fmt.Errorf("invalid table name")}
+		}
+		// #nosec G201 - table name is validated above
 		query := fmt.Sprintf(`
 			SELECT 
 				'%s' as table_name,
@@ -285,9 +307,6 @@ func (m UIModel) saveQueryResultsCmd() tea.Cmd {
 // importCSVCmd imports a CSV file into the current table
 func (m UIModel) importCSVCmd() tea.Cmd {
 	return func() tea.Msg {
-		// For this demo, we'll create a simple CSV import
-		// In a real implementation, you'd want more sophisticated CSV parsing and table creation
-
 		file, err := os.Open(m.importFilePath)
 		if err != nil {
 			return importDoneMsg{tableName: "", rowCount: 0, err: fmt.Errorf("failed to open file: %w", err)}
@@ -307,26 +326,68 @@ func (m UIModel) importCSVCmd() tea.Cmd {
 		headers := records[0]
 		dataRows := records[1:]
 
+		// Validate column names
+		for _, h := range headers {
+			if !sqliteservice.ValidColumnName(h) {
+				return importDoneMsg{tableName: "", rowCount: 0, err: fmt.Errorf("invalid column name in CSV: %q", h)}
+			}
+		}
+
 		// Create table name based on file
 		baseFilename := filepath.Base(m.importFilePath)
-		tableName := fmt.Sprintf("imported_%s_%s",
-			baseFilename[:len(baseFilename)-4], // remove .csv extension
-			time.Now().Format("20060102_150405"))
+		ext := filepath.Ext(baseFilename)
+		nameWithoutExt := baseFilename
+		if ext != "" {
+			nameWithoutExt = baseFilename[:len(baseFilename)-len(ext)]
+		}
+		tableName := fmt.Sprintf("imported_%s_%s", nameWithoutExt, time.Now().Format("20060102_150405"))
 
-		// For demo purposes, create a simple table with TEXT columns
-		// In a real implementation, you'd want to infer data types
-		createSQL := fmt.Sprintf("CREATE TABLE %s (", tableName)
+		if !sqliteservice.ValidTableName(tableName) {
+			return importDoneMsg{tableName: "", rowCount: 0, err: fmt.Errorf("generated table name is invalid: %q", tableName)}
+		}
+
+		// Create table with TEXT columns using quoted identifiers
+		createSQL := fmt.Sprintf("CREATE TABLE \"%s\" (", tableName)
 		for i, header := range headers {
 			if i > 0 {
 				createSQL += ", "
 			}
-			createSQL += fmt.Sprintf("%s TEXT", header)
+			createSQL += fmt.Sprintf("\"%s\" TEXT", header)
 		}
 		createSQL += ")"
 
-		// This is a simplified version - in a real implementation you'd use the service
-		// For now, return success message
-		rowCount := len(dataRows)
+		if err := m.svc.Exec(createSQL); err != nil {
+			return importDoneMsg{tableName: tableName, rowCount: 0, err: fmt.Errorf("failed to create table: %w", err)}
+		}
+
+		// Insert data rows using parameterized queries
+		placeholders := make([]string, len(headers))
+		for i := range placeholders {
+			placeholders[i] = "?"
+		}
+		quotedCols := make([]string, len(headers))
+		for i, h := range headers {
+			quotedCols[i] = fmt.Sprintf("\"%s\"", h)
+		}
+		insertSQL := fmt.Sprintf("INSERT INTO \"%s\" (%s) VALUES (%s)",
+			tableName, strings.Join(quotedCols, ", "), strings.Join(placeholders, ", "))
+
+		rowCount := 0
+		for _, row := range dataRows {
+			args := make([]interface{}, len(headers))
+			for i := range headers {
+				if i < len(row) {
+					args[i] = row[i]
+				} else {
+					args[i] = ""
+				}
+			}
+			if err := m.svc.Exec(insertSQL, args...); err != nil {
+				return importDoneMsg{tableName: tableName, rowCount: rowCount, err: fmt.Errorf("failed to insert row %d: %w", rowCount+1, err)}
+			}
+			rowCount++
+		}
+
 		return importDoneMsg{tableName: tableName, rowCount: rowCount, err: nil}
 	}
 }

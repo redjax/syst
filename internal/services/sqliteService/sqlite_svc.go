@@ -21,6 +21,16 @@ func validTableName(name string) bool {
 	return matched
 }
 
+// ValidTableName is the exported version of validTableName for use by other packages.
+func ValidTableName(name string) bool {
+	return validTableName(name)
+}
+
+// ValidColumnName checks if a column name is safe to use in SQL queries.
+func ValidColumnName(name string) bool {
+	return validTableName(name) // same rules as table names
+}
+
 // NewSQLiteService opens the database file
 func NewSQLiteService(dbPath string) (*SQLiteService, error) {
 	db, err := sql.Open("sqlite3", dbPath)
@@ -117,7 +127,9 @@ func (s *SQLiteService) BuildTableQuery(table string) (string, error) {
 
 // QueryWithPagination runs a query with LIMIT/OFFSET and returns columns, rows
 func (s *SQLiteService) QueryWithPagination(query string, args []interface{}, limit, offset int) ([]string, []map[string]interface{}, error) {
-	pagedQuery := fmt.Sprintf("%s LIMIT %d OFFSET %d", query, limit, offset)
+	// Strip any existing LIMIT/OFFSET to avoid double pagination
+	cleaned := regexp.MustCompile(`(?i)\s+LIMIT\s+\d+(\s+OFFSET\s+\d+)?\s*$`).ReplaceAllString(query, "")
+	pagedQuery := fmt.Sprintf("%s LIMIT %d OFFSET %d", cleaned, limit, offset)
 	rows, err := s.db.Query(pagedQuery, args...)
 	if err != nil {
 		return nil, nil, err
@@ -234,12 +246,30 @@ func (s *SQLiteService) DropTable(table string) error {
 	if strings.TrimSpace(table) == "" {
 		return fmt.Errorf("table name cannot be empty")
 	}
+	if !validTableName(table) {
+		return fmt.Errorf("invalid table name: must contain only alphanumeric characters and underscores")
+	}
+	// #nosec G201 - table name is validated above
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", table)
 	_, err := s.db.Exec(query)
 	if err != nil {
 		return fmt.Errorf("failed to drop table %s: %w", table, err)
 	}
 	return nil
+}
+
+// GetTableRowCount returns the total number of rows in a table.
+func (s *SQLiteService) GetTableRowCount(table string) (int, error) {
+	if !validTableName(table) {
+		return 0, fmt.Errorf("invalid table name: %s", table)
+	}
+	// #nosec G201 - table name is validated above
+	var count int
+	err := s.db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", table)).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // Exec executes a statement without returning rows

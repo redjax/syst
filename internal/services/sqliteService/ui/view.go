@@ -113,7 +113,11 @@ func (m UIModel) viewTable() string {
 	} else {
 		pageHints = append(pageHints, "n: next page (-)")
 	}
-	b.WriteString(fmt.Sprintf("Page %d (%d rows) | %s\n", page, len(m.rows), strings.Join(pageHints, " | ")))
+	b.WriteString(fmt.Sprintf("Page %d (%d rows)", page, len(m.rows)))
+	if m.totalRows > 0 {
+		b.WriteString(fmt.Sprintf(" of %d total", m.totalRows))
+	}
+	b.WriteString(fmt.Sprintf(" | %s\n", strings.Join(pageHints, " | ")))
 
 	b.WriteString("↑/↓: row | ←/→: column | Space: select | e: expand | x: export table | X: export selected | Ctrl+S: save results\n")
 	b.WriteString("s: schema | i: info | I: indexes | v: views | dd: delete | /: query | m: import CSV | q: quit\n")

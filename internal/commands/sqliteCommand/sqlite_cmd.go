@@ -171,6 +171,10 @@ func performCSVExport(dbPath, tableName, outputDir string) error {
 }
 
 func exportTable(svc *sqliteservice.SQLiteService, tableName, outputDir string) (int, error) {
+	if !sqliteservice.ValidTableName(tableName) {
+		return 0, fmt.Errorf("invalid table name: %s", tableName)
+	}
+	// #nosec G201 - table name is validated above
 	query := fmt.Sprintf("SELECT * FROM %s", tableName)
 	columns, rows, err := svc.Query(query, nil)
 	if err != nil {
@@ -246,9 +250,18 @@ func performCSVImport(dbPath, csvPath, tableName string) error {
 	}
 	defer svc.Close()
 
+	// Validate table name
+	if !sqliteservice.ValidTableName(tableName) {
+		return fmt.Errorf("invalid table name: must contain only alphanumeric characters and underscores")
+	}
+
+	// Validate and sanitize column names from CSV headers
 	var columnDefs []string
 	for _, header := range headers {
 		cleanHeader := strings.ReplaceAll(header, " ", "_")
+		if !sqliteservice.ValidColumnName(cleanHeader) {
+			return fmt.Errorf("invalid column name in CSV header: %q", header)
+		}
 		columnDefs = append(columnDefs, fmt.Sprintf("%s TEXT", cleanHeader))
 	}
 

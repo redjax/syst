@@ -185,7 +185,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.offset = 0
 					m.loading = true
 					m.mode = modeTable
-					return m, m.runQueryCmd()
+					return m, tea.Batch(m.runQueryCmd(), m.loadRowCountCmd())
 				}
 			case "d":
 				m.dCount++
@@ -237,7 +237,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.selectedCol > 0 {
 					m.selectedCol--
 					m.tableComp = m.buildTable()
-					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
+					m.errMsg = fmt.Sprintf("Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
 				}
 				return m, nil
 
@@ -246,7 +246,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.selectedCol < len(m.columns)-1 {
 					m.selectedCol++
 					m.tableComp = m.buildTable()
-					m.errMsg = fmt.Sprintf("INFO: Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
+					m.errMsg = fmt.Sprintf("Column %d/%d (%s)", m.selectedCol+1, len(m.columns), m.columns[m.selectedCol])
 				}
 				return m, nil
 
@@ -257,12 +257,10 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case " ":
 				// let the table component handle row selection
-				m.errMsg = "INFO: Space pressed, delegating to table"
 				var cmd tea.Cmd
 				m.tableComp, cmd = m.tableComp.Update(msg)
-				// Check selection after update
 				selectedRows := m.tableComp.SelectedRows()
-				m.errMsg += fmt.Sprintf(", now %d rows selected", len(selectedRows))
+				m.errMsg = fmt.Sprintf("%d row(s) selected", len(selectedRows))
 				return m, cmd
 
 			case "e":
@@ -278,14 +276,15 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						cellContent = "(no data)"
 					}
 
+					m.expandRow = m.selectedIndex
 					m.expandCol = cellKey
 					m.expandVal = cellContent
 					expandContent := fmt.Sprintf("Column: %s\n\nContent:\n%s", cellKey, cellContent)
 					m.vp.SetContent(expandContent)
 					m.mode = modeExpandCell
-					m.errMsg = fmt.Sprintf("INFO: Expanded cell %s", cellKey)
+					m.errMsg = ""
 				} else {
-					m.errMsg = "INFO: No cell content to expand"
+					m.errMsg = "No cell content to expand"
 				}
 				return m, nil
 
@@ -357,11 +356,8 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "d":
 				m.dCount++
-				m.errMsg = fmt.Sprintf("d pressed, dCount now: %d", m.dCount)
 				if m.dCount == 1 {
-					// Single d pressed - just show debug info
-					selectedRows := m.tableComp.SelectedRows()
-					m.errMsg += fmt.Sprintf(", single d: %d selected rows", len(selectedRows))
+					m.errMsg = "Press d again to delete selected rows"
 				}
 				if m.dCount == 2 {
 					var rowIDs []int64
@@ -370,111 +366,75 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					selectedRows := m.tableComp.SelectedRows()
 
 					if len(selectedRows) > 0 {
-						m.errMsg = fmt.Sprintf("DD: %d selected rows.", len(selectedRows))
-
-						// Process ALL selected rows to collect their IDs
-						for i, row := range selectedRows {
-							var idValue interface{}
-							var idKey string
+						for _, row := range selectedRows {
 							if v, ok := row.Data["rowid"]; ok {
-								idValue = v
-								idKey = "rowid"
-							} else if v, ok := row.Data["id"]; ok {
-								idValue = v
-								idKey = "id"
-							}
-
-							if idValue != nil {
-								if id, ok := toInt64(idValue); ok {
+								if id, ok := toInt64(v); ok {
 									rowIDs = append(rowIDs, id)
-									m.errMsg += fmt.Sprintf(" Row[%d]: %s=%d", i, idKey, id)
-								} else {
-									m.errMsg += fmt.Sprintf(" Row[%d]: conversion failed", i)
 								}
-							} else {
-								m.errMsg += fmt.Sprintf(" Row[%d]: no ID", i)
+							} else if v, ok := row.Data["id"]; ok {
+								if id, ok := toInt64(v); ok {
+									rowIDs = append(rowIDs, id)
+								}
 							}
 						}
 					} else {
-						m.errMsg = "DD: NO SELECTED ROWS"
 						// Try highlighted row as fallback
 						highlightedRow := m.tableComp.HighlightedRow()
 						if v, ok := highlightedRow.Data["rowid"]; ok {
 							if id, ok := toInt64(v); ok {
 								rowIDs = append(rowIDs, id)
-								m.errMsg += fmt.Sprintf(", using highlighted rowid %d", id)
 							}
 						} else if v, ok := highlightedRow.Data["id"]; ok {
 							if id, ok := toInt64(v); ok {
 								rowIDs = append(rowIDs, id)
-								m.errMsg += fmt.Sprintf(", using highlighted id %d", id)
 							}
 						}
 					}
 
 					m.dCount = 0
 					if len(rowIDs) > 0 {
-						m.errMsg = fmt.Sprintf("Deleting %d rows with IDs: %v", len(rowIDs), rowIDs)
+						m.errMsg = fmt.Sprintf("Deleting %d row(s)", len(rowIDs))
 						m.loading = true
 						return m, m.deleteRowsCmd(rowIDs)
 					} else {
-						m.errMsg += " - No valid rowIDs found"
+						m.errMsg = "No rows to delete"
 					}
 				}
-			case "D": // Capital D for immediate delete (testing)
+			case "D": // Capital D for immediate delete
 				var rowIDs []int64
 
-				// Get selected rows from the bubble-table component
 				selectedRows := m.tableComp.SelectedRows()
-				m.errMsg = fmt.Sprintf("Capital D INFO: Found %d selected rows", len(selectedRows))
-
 				if len(selectedRows) > 0 {
-					// Process selected rows
-					for i, row := range selectedRows {
-						m.errMsg += fmt.Sprintf(", row[%d] has keys: %v", i, getMapKeys(row.Data))
+					for _, row := range selectedRows {
 						if v, ok := row.Data["rowid"]; ok {
-							m.errMsg += fmt.Sprintf(", rowid=%v", v)
 							if id, ok := toInt64(v); ok {
 								rowIDs = append(rowIDs, id)
-								m.errMsg += fmt.Sprintf(", converted to int64=%d", id)
-							} else {
-								m.errMsg += ", conversion to int64 failed"
 							}
 						} else if v, ok := row.Data["id"]; ok {
-							m.errMsg += fmt.Sprintf(", id=%v", v)
 							if id, ok := toInt64(v); ok {
 								rowIDs = append(rowIDs, id)
-								m.errMsg += fmt.Sprintf(", converted to int64=%d", id)
-							} else {
-								m.errMsg += ", conversion to int64 failed"
 							}
-						} else {
-							m.errMsg += ", no rowid or id key found"
 						}
 					}
 				} else {
-					// If no rows selected, try to get the current highlighted row
 					highlightedRow := m.tableComp.HighlightedRow()
-					m.errMsg += fmt.Sprintf(", highlighted row keys: %v", getMapKeys(highlightedRow.Data))
 					if v, ok := highlightedRow.Data["rowid"]; ok {
 						if id, ok := toInt64(v); ok {
 							rowIDs = append(rowIDs, id)
-							m.errMsg += fmt.Sprintf(", using highlighted rowid %d", id)
 						}
 					} else if v, ok := highlightedRow.Data["id"]; ok {
 						if id, ok := toInt64(v); ok {
 							rowIDs = append(rowIDs, id)
-							m.errMsg += fmt.Sprintf(", using highlighted id %d", id)
 						}
 					}
 				}
 
 				if len(rowIDs) > 0 {
-					m.errMsg = fmt.Sprintf("Capital D INFO: Deleting %d rows with IDs: %v", len(rowIDs), rowIDs)
+					m.errMsg = fmt.Sprintf("Deleting %d row(s)", len(rowIDs))
 					m.loading = true
 					return m, m.deleteRowsCmd(rowIDs)
 				} else {
-					m.errMsg = "Capital D INFO: No rows to delete - no valid rowIDs found"
+					m.errMsg = "No rows to delete"
 				}
 			case "S": // Capital S to show current selections (testing)
 				selectedRows := m.tableComp.SelectedRows()
@@ -485,6 +445,8 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.errMsg += fmt.Sprintf(", row[%d] keys: %v", i, keys)
 					}
 				}
+			default:
+				m.dCount = 0
 			}
 
 			return m, nil
@@ -492,14 +454,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// -------- Query Results Loaded --------
 	case queryResultMsg:
-		// INFO: Show raw query results
-		if len(msg.rows) > 0 {
-			rawKeys := make([]string, 0, len(msg.rows[0]))
-			for k := range msg.rows[0] {
-				rawKeys = append(rawKeys, k)
-			}
-			m.errMsg = fmt.Sprintf("RAW QUERY KEYS: %v", rawKeys)
-		}
+		m.errMsg = ""
 
 		// sanitize and trim column keys and drop reserved names
 		reserved := map[string]struct{}{
@@ -656,6 +611,12 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.vp.Height = msg.Height - 6
 
 		m.tableComp = m.buildTable()
+		return m, nil
+
+	case rowCountMsg:
+		if msg.err == nil && msg.count >= 0 {
+			m.totalRows = msg.count
+		}
 		return m, nil
 
 	case error:
