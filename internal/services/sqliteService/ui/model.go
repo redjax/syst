@@ -39,6 +39,7 @@ type UIModel struct {
 	// query & pagination
 	query         string
 	limit, offset int
+	totalRows     int
 
 	// DB results (clean DB-only column names)
 	columns []string
@@ -47,7 +48,6 @@ type UIModel struct {
 	// selection / cursor
 	selectedIndex int
 	selectedCol   int
-	selectedRows  map[int]bool
 
 	// quick state
 	dCount  int
@@ -102,7 +102,6 @@ func NewUIModel(svc *sqliteservice.SQLiteService, startTable string) UIModel {
 		offset:          0,
 		queryInput:      ti,
 		importFileInput: importInput,
-		selectedRows:    make(map[int]bool),
 		selectedIndex:   0,
 		selectedCol:     0,
 		vp:              vp,
@@ -127,7 +126,7 @@ func (m UIModel) Init() tea.Cmd {
 	if m.mode == modeLauncher {
 		return m.loadTablesCmd()
 	}
-	return m.runQueryCmd()
+	return tea.Batch(m.runQueryCmd(), m.loadRowCountCmd())
 }
 
 // completeFilePath provides tab completion for file paths

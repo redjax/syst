@@ -48,3 +48,8 @@ type importDoneMsg struct {
 	rowCount  int
 	err       error
 }
+
+type rowCountMsg struct {
+	count int
+	err   error
+}
