@@ -15,7 +15,7 @@ function print_help {
   echo "[ Flags ]"
   echo "  --help: Print this help menu"
   echo ""
-  echo "  --bin-name (default: b2cleaner): Name for the binary output"
+  echo "  --bin-name (default: syst: Name for the binary output"
   echo "  --build-os (default: linux): Target OS to build for"
   echo "  --build-arch (default: amd4): Target CPU architecture to build for"
   echo "  --build-output-dir (default: dist/): Path to binary output directory"
@@ -30,34 +30,34 @@ fi
 ## Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --help)
-      print_help
-      exit 0
+  --help)
+    print_help
+    exit 0
     ;;
-    --bin-name)
-      BinName="$2"
-      shift 2
-      ;;
-    --build-os)
-      BuildOS="$2"
-      shift 2
-      ;;
-    --build-arch)
-      BuildArch="$2"
-      shift 2
-      ;;
-    --build-output-dir)
-      BuildOutputDir="$2"
-      shift 2
-      ;;
-    --build-target)
-      BuildTarget="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown parameter: $1"
-      exit 1
-      ;;
+  --bin-name)
+    BinName="$2"
+    shift 2
+    ;;
+  --build-os)
+    BuildOS="$2"
+    shift 2
+    ;;
+  --build-arch)
+    BuildArch="$2"
+    shift 2
+    ;;
+  --build-output-dir)
+    BuildOutputDir="$2"
+    shift 2
+    ;;
+  --build-target)
+    BuildTarget="$2"
+    shift 2
+    ;;
+  *)
+    echo "Unknown parameter: $1"
+    exit 1
+    ;;
   esac
 done
 
