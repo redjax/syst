@@ -13,13 +13,13 @@ function print_help {
   echo "-- | Build Go module | --"
   echo ""
   echo "[ Flags ]"
-  echo "  --help: Print this help menu"
+  echo "  -h, --help                           Print this help menu"
   echo ""
-  echo "  --bin-name (default: syst: Name for the binary output"
-  echo "  --build-os (default: linux): Target OS to build for"
-  echo "  --build-arch (default: amd4): Target CPU architecture to build for"
-  echo "  --build-output-dir (default: dist/): Path to binary output directory"
-  echo "  --build-target (default: ./main.go): Path to module entrypoint"
+  echo "  --bin-name (default: syst)           Name for the binary output"
+  echo "  --build-os (default: linux)          Target OS to build for"
+  echo "  --build-arch (default: amd4)         Target CPU architecture to build for"
+  echo "  --build-output-dir (default: dist/)  Path to binary output directory"
+  echo "  --build-target (default: ./main.go)  Path to module entrypoint"
 }
 
 if ! command -v go --version >/dev/null 2>&1; then
@@ -30,7 +30,7 @@ fi
 ## Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-  --help)
+  -h | --help)
     print_help
     exit 0
     ;;
