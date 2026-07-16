@@ -29,14 +29,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       ## Auto-increment version based on existing tags and releaseType input
       - name: Auto Increment Semver Action
         id: versioning
-        uses: MCKanpolat/auto-semver-action@v2
+        uses: MCKanpolat/auto-semver-action@v3
         with:
           releaseType: ${{ inputs.releaseType }}
           incrementPerCommit: false
@@ -62,7 +62,7 @@ jobs:
         run: echo "${{ steps.versioning.outputs.version }}" > version.txt
 
       - name: Upload version artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: version
           path: version.txt
@@ -75,12 +75,12 @@ jobs:
       - tag
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download version artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: version
 
@@ -92,7 +92,7 @@ jobs:
         run: git fetch --tags
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: "1.24.6"
 
@@ -152,7 +152,7 @@ jobs:
         run: ls -lh dist/
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist
           path: |
@@ -169,18 +169,18 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist
 
       - name: Download version artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: version
 
@@ -192,7 +192,7 @@ jobs:
         run: ls -lh dist/
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.VERSION }}
           name: ${{ env.VERSION }}
