@@ -19,7 +19,7 @@ jobs:
       security-events: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Run OSV-Scanner
         ## Releases: https://github.com/google/osv-scanner-action/releases
