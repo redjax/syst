@@ -4,9 +4,9 @@ go 1.26.3
 
 require (
 	github.com/briandowns/spinner v1.23.2
-	github.com/charmbracelet/bubbles v0.21.0
-	github.com/charmbracelet/bubbletea v1.3.10
-	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/charmbracelet/bubbles/v2 v2.1.1
+	github.com/charmbracelet/bubbletea/v2 v2.0.8
+	github.com/charmbracelet/lipgloss/v2 v2.0.5
 	github.com/evertras/bubble-table v0.19.2
 	github.com/go-git/go-git/v5 v5.19.1
 	github.com/google/uuid v1.6.0
@@ -15,9 +15,9 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/knadh/koanf/parsers/dotenv v1.1.1
 	github.com/knadh/koanf/parsers/json v1.0.0
-	github.com/knadh/koanf/parsers/toml v0.1.0
+	github.com/knadh/koanf/parsers/toml/v2 v2.2.1
 	github.com/knadh/koanf/parsers/yaml v1.1.0
-	github.com/knadh/koanf/providers/env v1.1.0
+	github.com/knadh/koanf/providers/env/v2 v2.0.0
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/posflag v1.0.1
 	github.com/knadh/koanf/v2 v2.3.2
