@@ -23,7 +23,7 @@ jobs:
 
       - name: Run OSV-Scanner
         ## Releases: https://github.com/google/osv-scanner-action/releases
-        uses: google/osv-scanner-action/osv-scanner-action@v2.3.3
+        uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
         id: osv-scan
         continue-on-error: true
         with:
