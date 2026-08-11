@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	tea "charm.land/bubbletea/v2"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // helper: convert interface{} -> int64 if possible
