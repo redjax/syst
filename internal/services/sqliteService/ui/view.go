@@ -3,9 +3,15 @@ package ui
 import (
 	"fmt"
 	"strings"
+
+	tea "charm.land/bubbletea/v2"
 )
 
-func (m UIModel) View() string {
+func (m UIModel) View() tea.View {
+	return tea.NewView(m.renderView())
+}
+
+func (m UIModel) renderView() string {
 	switch m.mode {
 	case modeLauncher:
 		return m.viewLauncher()
