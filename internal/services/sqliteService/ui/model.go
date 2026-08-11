@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	t "github.com/evertras/bubble-table/table"
 	sqliteservice "github.com/redjax/syst/internal/services/sqliteService"
 )
@@ -84,18 +84,19 @@ func NewUIModel(svc *sqliteservice.SQLiteService, startTable string) UIModel {
 	ti := textinput.New()
 	ti.Placeholder = "Enter SQL query"
 	ti.CharLimit = 1024
-	ti.Width = 50
+	ti.SetWidth(50)
 	ti.Blur()
 
 	// Import file input
 	importInput := textinput.New()
 	importInput.Placeholder = "Enter CSV file path (e.g., ./data.csv)"
 	importInput.CharLimit = 256
-	importInput.Width = 60
+	importInput.SetWidth(60)
 	importInput.Blur()
 
 	// minimal viewport until we get window size
-	vp := viewport.Model{}
+	vp := viewport.New()
+
 	m := UIModel{
 		svc:             svc,
 		limit:           20,

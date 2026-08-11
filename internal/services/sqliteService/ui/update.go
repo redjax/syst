@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 // helper: convert interface{} -> int64 if possible
@@ -44,11 +44,11 @@ func getMapKeys(m map[string]any) []string {
 func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// If in expand mode forward the message to the viewport (allows scrolling)
 		if m.mode == modeExpandCell {
 			// ESC to close expand
-			if msg.Type == tea.KeyEsc {
+			if msg.Code == tea.KeyEsc {
 				m.mode = modeTable
 				return m, nil
 			}
@@ -60,7 +60,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// If in schema/info/indexes/views mode, handle ESC to return to table
 		if m.mode == modeSchema || m.mode == modeTableInfo || m.mode == modeIndexes || m.mode == modeViews {
-			if msg.Type == tea.KeyEsc {
+			if msg.Code == tea.KeyEsc {
 				m.mode = modeTable
 				return m, nil
 			}
@@ -90,7 +90,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// If in import mode, handle import wizard steps
 		if m.mode == modeImport {
-			if msg.Type == tea.KeyEsc {
+			if msg.Code == tea.KeyEsc {
 				m.mode = modeTable
 				m.importFileInput.Blur()
 				return m, nil
@@ -139,7 +139,9 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
-		} // If query input is focused, let it handle key updates
+		}
+
+		// If query input is focused, let it handle key updates
 		if m.queryInput.Focused() {
 			var cmd tea.Cmd
 			m.queryInput, _ = m.queryInput.Update(msg)
@@ -162,7 +164,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Normal key handling per mode
 		// -------- Launcher Mode --------
 		if m.mode == modeLauncher {
-			if msg.Type == tea.KeyCtrlC || msg.String() == "q" {
+			if msg.String() == "ctrl+c" || msg.String() == "q" {
 				return m, tea.Quit
 			}
 			switch msg.String() {
@@ -204,7 +206,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// -------- Table Mode --------
 		if m.mode == modeTable {
 			// Escape back to launcher
-			if msg.Type == tea.KeyEsc {
+			if msg.Code == tea.KeyEsc {
 				m.mode = modeLauncher
 				m.loading = true
 				return m, m.loadTablesCmd()
@@ -255,7 +257,7 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.queryInput.Focus()
 				return m, nil
 
-			case " ":
+			case "space":
 				// let the table component handle row selection
 				var cmd tea.Cmd
 				m.tableComp, cmd = m.tableComp.Update(msg)
@@ -607,8 +609,12 @@ func (m UIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.termHeight = msg.Height
 
 		// resize viewport (expand view) if present
-		m.vp.Width = msg.Width
-		m.vp.Height = msg.Height - 6
+		vpHeight := msg.Height - 6
+		if vpHeight < 0 {
+			vpHeight = 0
+		}
+		m.vp.SetWidth(msg.Width)
+		m.vp.SetHeight(vpHeight)
 
 		m.tableComp = m.buildTable()
 		return m, nil

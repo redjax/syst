@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	sqliteservice "github.com/redjax/syst/internal/services/sqliteService"
 	sqliteui "github.com/redjax/syst/internal/services/sqliteService/ui"
 	"github.com/spf13/cobra"
