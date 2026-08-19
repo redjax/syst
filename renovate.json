@@ -1,16 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "dependencyDashboard": true,
-  "enabledManagers": ["gomod", "github-actions"],
-  "packageRules": [
-    {
-      "matchManagers": ["gomod"],
-      "groupName": "Go dependencies"
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "groupName": "Github Actions"
-    }
+  "extends": [
+    "github>redjax/PipelineTemplates//config/renovate/default#main"
   ]
 }
